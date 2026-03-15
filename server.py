@@ -24,6 +24,21 @@ from security.auth import (
 )
 from security.encryption import decrypt_json, encrypt_json, secure_delete
 
+# Cache Qwen/torch status at import time (runs once, in the main thread)
+def _check_qwen_status() -> dict:
+    """Check if Qwen provider is available. Runs once at startup."""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return {"available": True, "reason": None}
+        return {"available": False, "reason": "No CUDA GPU"}
+    except ImportError:
+        return {"available": False, "reason": "PyTorch not installed"}
+    except Exception as e:
+        return {"available": False, "reason": str(e)}
+
+_QWEN_STATUS = _check_qwen_status()
+
 app = FastAPI(title="ABA Observer", version="0.4.0")
 
 BEHAVIOR_LIBRARY_PATH = Path(__file__).parent / "configs" / "behavior_library.json"
@@ -202,13 +217,10 @@ async def list_providers(request: Request, authorization: str | None = Header(No
                   else "No API key" if not gemini_available else "SDK not installed",
     })
 
-    try:
-        import torch
-        qwen_available = torch.cuda.is_available()
-        qwen_reason = None if qwen_available else "No CUDA GPU"
-    except ImportError:
-        qwen_available = False
-        qwen_reason = "PyTorch not installed"
+    # Qwen availability is cached at startup to avoid blocking the event loop
+    # (torch import takes 30s+ and freezes the async server)
+    qwen_available = _QWEN_STATUS["available"]
+    qwen_reason = _QWEN_STATUS["reason"]
 
     providers.append({
         "name": "qwen",
