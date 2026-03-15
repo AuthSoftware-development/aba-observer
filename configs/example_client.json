@@ -1,0 +1,44 @@
+{
+  "client_id": "Client_A",
+  "notes": "Example client config — customize for each client. Never use real names.",
+  "behavior_targets": [
+    {
+      "name": "aggression",
+      "operational_definition": "Any instance of hitting, kicking, biting, scratching, or hair pulling directed at another person's body with sufficient force to produce an audible sound or visible mark."
+    },
+    {
+      "name": "elopement",
+      "operational_definition": "Any instance of leaving the designated therapy area (beyond arm's reach of the therapist) without permission, including running away from the table, leaving the room, or moving beyond the therapy boundary."
+    },
+    {
+      "name": "property_destruction",
+      "operational_definition": "Any instance of throwing, breaking, ripping, or forcefully displacing objects from their intended location (e.g., sweeping materials off the table, throwing items, tearing worksheets)."
+    },
+    {
+      "name": "vocal_protest",
+      "operational_definition": "Any vocalization above conversational volume including crying, screaming, whining, or shouting lasting 3 or more seconds."
+    }
+  ],
+  "replacement_behaviors": [
+    {
+      "name": "functional_communication",
+      "operational_definition": "Any instance of using words, signs, or PECS to request a break, request an item, or express a need (e.g., saying 'break please', signing 'help', exchanging a break card)."
+    },
+    {
+      "name": "appropriate_waiting",
+      "operational_definition": "Remaining seated or standing in the designated area with hands and feet to self for a minimum of 5 seconds when instructed to wait."
+    }
+  ],
+  "skill_acquisition_targets": [
+    {
+      "name": "manding_for_items",
+      "description": "Client independently requests desired items using 1-2 word vocal mands",
+      "mastery_criteria": "80% independent across 3 consecutive sessions"
+    },
+    {
+      "name": "following_1step_instructions",
+      "description": "Client follows simple 1-step motor instructions (e.g., 'sit down', 'give me', 'touch')",
+      "mastery_criteria": "90% correct with no prompt across 2 consecutive sessions"
+    }
+  ]
+}

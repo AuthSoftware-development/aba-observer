@@ -1,0 +1,307 @@
+{
+  "maladaptive_behaviors": [
+    {
+      "id": "aggression",
+      "name": "Aggression",
+      "aliases": ["hitting", "kicking", "biting", "scratching", "hair pulling", "punching", "slapping"],
+      "operational_definition": "Any instance of hitting, kicking, biting, scratching, punching, slapping, or hair pulling directed at another person's body with sufficient force to produce an audible sound or visible mark.",
+      "data_collection": "frequency",
+      "intensity_tracked": true
+    },
+    {
+      "id": "self_injurious_behavior",
+      "name": "Self-Injurious Behavior (SIB)",
+      "aliases": ["SIB", "self harm", "head banging", "head hitting", "self biting", "self scratching", "face slapping"],
+      "operational_definition": "Any instance of the client inflicting physical harm on their own body, including head banging against surfaces, hitting self with hands or objects, biting own skin, or scratching self leaving visible marks.",
+      "data_collection": "frequency",
+      "intensity_tracked": true
+    },
+    {
+      "id": "property_destruction",
+      "name": "Property Destruction",
+      "aliases": ["breaking things", "destroying", "ripping", "tearing", "smashing"],
+      "operational_definition": "Any instance of throwing, breaking, ripping, or forcefully displacing objects from their intended location (e.g., sweeping materials off the table, throwing items, tearing worksheets, breaking toys).",
+      "data_collection": "frequency",
+      "intensity_tracked": true
+    },
+    {
+      "id": "throwing",
+      "name": "Throwing",
+      "aliases": ["throwing things", "throwing objects", "tossing", "hurling"],
+      "operational_definition": "Any instance of propelling an object through the air using hands or feet, regardless of direction or target, excluding functional throws during play activities.",
+      "data_collection": "frequency",
+      "intensity_tracked": false
+    },
+    {
+      "id": "spitting",
+      "name": "Spitting",
+      "aliases": ["spit", "spits", "spat"],
+      "operational_definition": "Any instance of forcefully expelling saliva or other oral contents from the mouth toward a person, object, or surface.",
+      "data_collection": "frequency",
+      "intensity_tracked": false
+    },
+    {
+      "id": "elopement",
+      "name": "Elopement",
+      "aliases": ["running away", "bolting", "leaving", "eloping", "fleeing", "running off"],
+      "operational_definition": "Any instance of leaving the designated therapy area (beyond arm's reach of the therapist) without permission, including running away from the table, leaving the room, or moving beyond the therapy boundary.",
+      "data_collection": "frequency",
+      "intensity_tracked": false
+    },
+    {
+      "id": "noncompliance",
+      "name": "Noncompliance",
+      "aliases": ["non compliance", "refusal", "refusing", "not following directions", "not listening", "ignoring instructions"],
+      "operational_definition": "Failure to initiate a response within 5 seconds of a clear instruction or actively refusing by saying 'no', turning away, or engaging in a competing behavior instead of the requested action.",
+      "data_collection": "frequency",
+      "intensity_tracked": false
+    },
+    {
+      "id": "tantrum",
+      "name": "Tantrum",
+      "aliases": ["tantrums", "meltdown", "meltdowns", "outburst", "outbursts"],
+      "operational_definition": "A composite behavioral episode lasting 10+ seconds that includes two or more of the following: crying/screaming above conversational volume, dropping to the floor, flailing limbs, property destruction, or aggression.",
+      "data_collection": "frequency_duration",
+      "intensity_tracked": true
+    },
+    {
+      "id": "vocal_protest",
+      "name": "Vocal Protest / Screaming",
+      "aliases": ["screaming", "yelling", "crying", "whining", "shrieking", "vocal protest"],
+      "operational_definition": "Any vocalization above conversational volume including crying, screaming, whining, shrieking, or shouting lasting 3 or more seconds, excluding functional communication attempts.",
+      "data_collection": "frequency_duration",
+      "intensity_tracked": true
+    },
+    {
+      "id": "motor_stereotypy",
+      "name": "Motor Stereotypy",
+      "aliases": ["stimming", "hand flapping", "rocking", "spinning", "body rocking", "finger flicking"],
+      "operational_definition": "Repetitive, rhythmic motor movements that serve no apparent adaptive function, including hand flapping, body rocking, finger flicking, spinning objects, or spinning self.",
+      "data_collection": "duration",
+      "intensity_tracked": false
+    },
+    {
+      "id": "vocal_stereotypy",
+      "name": "Vocal Stereotypy",
+      "aliases": ["scripting", "echolalia", "repetitive sounds", "vocal stim"],
+      "operational_definition": "Repetitive vocalizations that are not communicative in context, including scripting from media, delayed echolalia, repetitive sounds or phrases, humming, or non-contextual sound production.",
+      "data_collection": "duration",
+      "intensity_tracked": false
+    },
+    {
+      "id": "pica",
+      "name": "PICA",
+      "aliases": ["eating non-food", "mouthing objects", "eating inedible"],
+      "operational_definition": "Any attempt to place non-food items in the mouth or ingest non-food substances, including mouthing toys, eating paper, dirt, or other inedible materials.",
+      "data_collection": "frequency",
+      "intensity_tracked": false
+    },
+    {
+      "id": "disrobing",
+      "name": "Disrobing",
+      "aliases": ["undressing", "taking clothes off", "removing clothing", "stripping"],
+      "operational_definition": "Any attempt to remove clothing items in non-appropriate contexts, including pulling off shoes, socks, shirt, or pants outside of dressing/undressing routines.",
+      "data_collection": "frequency",
+      "intensity_tracked": false
+    },
+    {
+      "id": "dropping",
+      "name": "Dropping / Flopping",
+      "aliases": ["flopping", "dropping to floor", "going limp", "falling down"],
+      "operational_definition": "Any instance of intentionally lowering body to the floor or going limp when standing or being guided, excluding falls caused by loss of balance.",
+      "data_collection": "frequency",
+      "intensity_tracked": false
+    },
+    {
+      "id": "inappropriate_touch",
+      "name": "Inappropriate Touch",
+      "aliases": ["touching others", "grabbing", "groping"],
+      "operational_definition": "Any instance of touching another person's body in a socially inappropriate manner, including grabbing, touching private areas, or prolonged unwanted physical contact.",
+      "data_collection": "frequency",
+      "intensity_tracked": false
+    },
+    {
+      "id": "food_refusal",
+      "name": "Food Refusal",
+      "aliases": ["refusing food", "not eating", "spitting food", "pushing food away"],
+      "operational_definition": "Active rejection of presented food items by turning head away, pushing food away, spitting food out, clamping mouth shut, or crying when food is presented.",
+      "data_collection": "frequency",
+      "intensity_tracked": false
+    },
+    {
+      "id": "toileting_accident",
+      "name": "Toileting Accident",
+      "aliases": ["accident", "wetting", "soiling", "incontinence"],
+      "operational_definition": "Any instance of urination or defecation in clothing or locations other than the toilet during waking hours.",
+      "data_collection": "frequency",
+      "intensity_tracked": false
+    },
+    {
+      "id": "biting",
+      "name": "Biting",
+      "aliases": ["bite", "bites", "bit"],
+      "operational_definition": "Any instance of closing teeth on another person's skin or clothing with sufficient force to leave an impression or cause a pain response.",
+      "data_collection": "frequency",
+      "intensity_tracked": true
+    },
+    {
+      "id": "kicking",
+      "name": "Kicking",
+      "aliases": ["kick", "kicks", "kicked"],
+      "operational_definition": "Any instance of forcefully extending a leg or foot toward another person or object with force sufficient to produce contact.",
+      "data_collection": "frequency",
+      "intensity_tracked": true
+    },
+    {
+      "id": "hair_pulling",
+      "name": "Hair Pulling",
+      "aliases": ["pulling hair", "hair pull", "grabbed hair"],
+      "operational_definition": "Any instance of grasping and pulling another person's hair with sufficient force to cause head movement or a pain response.",
+      "data_collection": "frequency",
+      "intensity_tracked": true
+    },
+    {
+      "id": "pinching",
+      "name": "Pinching",
+      "aliases": ["pinch", "pinches", "pinched"],
+      "operational_definition": "Any instance of squeezing another person's skin between thumb and finger(s) with sufficient force to cause a pain response or leave a mark.",
+      "data_collection": "frequency",
+      "intensity_tracked": false
+    }
+  ],
+  "replacement_behaviors": [
+    {
+      "id": "functional_communication",
+      "name": "Functional Communication",
+      "aliases": ["FCR", "manding", "requesting", "asking", "using words", "communication"],
+      "operational_definition": "Any instance of using words, signs, PECS, or AAC device to appropriately request a break, item, attention, or express a need."
+    },
+    {
+      "id": "appropriate_waiting",
+      "name": "Appropriate Waiting",
+      "aliases": ["waiting", "patience", "patient waiting"],
+      "operational_definition": "Remaining seated or standing in the designated area with hands and feet to self for a minimum of 5 seconds when instructed to wait."
+    },
+    {
+      "id": "toleration",
+      "name": "Toleration",
+      "aliases": ["tolerating", "accepting", "accepting no", "tolerating denial"],
+      "operational_definition": "Accepting denial of a preferred item/activity or a non-preferred instruction without engaging in maladaptive behavior for 10+ seconds."
+    },
+    {
+      "id": "coping_strategy",
+      "name": "Coping Strategy Use",
+      "aliases": ["coping", "deep breaths", "counting", "self regulation", "calm down"],
+      "operational_definition": "Independent use of a taught coping strategy (deep breaths, counting, squeezing a stress ball, requesting a break) when encountering a frustrating or aversive situation."
+    },
+    {
+      "id": "appropriate_play",
+      "name": "Appropriate Play",
+      "aliases": ["playing nicely", "functional play", "cooperative play"],
+      "operational_definition": "Engaging with toys or materials in their intended manner or in a creative/imaginative way without destructive or stereotypic interaction."
+    },
+    {
+      "id": "social_greeting",
+      "name": "Social Greeting",
+      "aliases": ["saying hi", "greeting", "waving", "hello"],
+      "operational_definition": "Independently or prompted greeting of another person through verbal ('hi', 'hello'), gestural (wave), or physical (handshake, high five) means within 5 seconds of the social cue."
+    },
+    {
+      "id": "turn_taking",
+      "name": "Turn Taking",
+      "aliases": ["taking turns", "sharing", "waiting for turn"],
+      "operational_definition": "Appropriately waiting for and then engaging in an activity during designated turn, without grabbing, protesting, or engaging in maladaptive behavior."
+    }
+  ],
+  "interventions": [
+    {
+      "id": "reinforcement_positive",
+      "name": "Positive Reinforcement",
+      "aliases": ["reward", "praise", "token", "preferred item delivery"]
+    },
+    {
+      "id": "reinforcement_negative",
+      "name": "Negative Reinforcement",
+      "aliases": ["escape", "break", "removal of demand"]
+    },
+    {
+      "id": "extinction",
+      "name": "Extinction / Planned Ignoring",
+      "aliases": ["ignoring", "planned ignoring", "withholding reinforcement"]
+    },
+    {
+      "id": "response_blocking",
+      "name": "Response Blocking",
+      "aliases": ["blocking", "physical block", "interrupt"]
+    },
+    {
+      "id": "redirection",
+      "name": "Redirection",
+      "aliases": ["redirect", "redirecting", "diversion"]
+    },
+    {
+      "id": "prompt_hierarchy",
+      "name": "Prompt Hierarchy",
+      "aliases": ["prompting", "prompt", "least to most", "most to least"]
+    },
+    {
+      "id": "dro",
+      "name": "DRO (Differential Reinforcement of Other)",
+      "aliases": ["DRO", "reinforcing absence"]
+    },
+    {
+      "id": "dra",
+      "name": "DRA (Differential Reinforcement of Alternative)",
+      "aliases": ["DRA", "reinforcing alternative"]
+    },
+    {
+      "id": "dri",
+      "name": "DRI (Differential Reinforcement of Incompatible)",
+      "aliases": ["DRI", "reinforcing incompatible"]
+    },
+    {
+      "id": "nce",
+      "name": "NCE (Noncontingent Escape)",
+      "aliases": ["NCE", "noncontingent escape", "free breaks"]
+    },
+    {
+      "id": "ncr",
+      "name": "NCR (Noncontingent Reinforcement)",
+      "aliases": ["NCR", "noncontingent reinforcement", "free access"]
+    },
+    {
+      "id": "token_economy",
+      "name": "Token Economy",
+      "aliases": ["token board", "tokens", "star chart", "point system"]
+    },
+    {
+      "id": "first_then",
+      "name": "First-Then / Premack Principle",
+      "aliases": ["first then", "premack", "grandma's rule"]
+    },
+    {
+      "id": "visual_schedule",
+      "name": "Visual Schedule",
+      "aliases": ["visual", "picture schedule", "schedule board"]
+    },
+    {
+      "id": "social_story",
+      "name": "Social Story",
+      "aliases": ["social narrative", "story"]
+    },
+    {
+      "id": "modeling",
+      "name": "Modeling",
+      "aliases": ["model", "demonstration", "showing how"]
+    }
+  ],
+  "voice_command_patterns": {
+    "add_behavior": ["add {behavior}", "track {behavior}", "start tracking {behavior}"],
+    "count_behavior": ["count {count} {behavior}", "{count} {behavior}", "add {count} {behavior}", "mark {count} {behavior}"],
+    "single_count": ["count {behavior}", "mark {behavior}", "{behavior} occurred", "one {behavior}"],
+    "remove_behavior": ["remove {behavior}", "stop tracking {behavior}", "delete {behavior}"],
+    "note": ["note {text}", "therapist note {text}", "add note {text}"],
+    "abc_start": ["start ABC", "ABC chain", "new ABC"],
+    "set_intensity": ["intensity {level}", "{behavior} intensity {level}"]
+  }
+}

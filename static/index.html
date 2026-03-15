@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ABA Observer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={darkMode:'class'}</script>
+  <style>
+    .drop-zone.dragover { border-color: #3a9ff4; background: rgba(59,130,246,0.08); }
+    .fade-in { animation: fadeIn 0.3s ease-in; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .spinner { border:3px solid rgba(148,163,184,0.3); border-top-color:#3a9ff4; border-radius:50%; width:24px; height:24px; animation:spin 0.8s linear infinite; display:inline-block; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .tab-active { border-bottom:2px solid #1e7fdf; color:#1e7fdf; }
+    .dark .tab-active { color:#60b8f9; border-color:#60b8f9; }
+    .rec-pulse { animation:pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    video#camera-preview { transform:scaleX(-1); }
+    #session-timer { font-variant-numeric:tabular-nums; }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 min-h-screen transition-colors">
+
+  <!-- ==================== LOGIN SCREEN (always dark) ==================== -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 bg-slate-950 text-slate-200">
+    <div class="w-full max-w-sm">
+      <!-- Subtle gradient glow behind logo -->
+      <div class="text-center mb-8 relative">
+        <div class="absolute inset-0 -top-8 flex items-start justify-center pointer-events-none"><div class="w-32 h-32 bg-blue-500/10 rounded-full blur-3xl"></div></div>
+        <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4 shadow-lg shadow-blue-500/20 relative">AO</div>
+        <h1 class="text-2xl font-bold text-white">ABA Observer</h1>
+        <p class="text-sm text-slate-400 mt-1">HIPAA-Secured Behavioral Data Collection</p>
+      </div>
+
+      <!-- Setup Form (first time) -->
+      <div id="setup-form" class="hidden bg-slate-900 rounded-xl border border-slate-800 p-6 shadow-2xl">
+        <h2 class="text-base font-semibold text-white mb-1">First-Time Setup</h2>
+        <p class="text-xs text-slate-400 mb-4">Create your admin account to get started.</p>
+        <label class="block text-sm font-medium text-slate-300 mb-1">Username</label>
+        <input id="setup-user" type="text" class="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2.5 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 placeholder-slate-500" placeholder="e.g., gabriel">
+        <label class="block text-sm font-medium text-slate-300 mb-1">PIN (4+ characters)</label>
+        <input id="setup-pin" type="password" class="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2.5 text-sm mb-5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 placeholder-slate-500" placeholder="Enter a secure PIN">
+        <button id="setup-btn" class="w-full bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-blue-500 transition-colors shadow-lg shadow-blue-600/20">Create Admin Account</button>
+        <p id="setup-error" class="text-xs text-red-400 mt-2 hidden"></p>
+      </div>
+
+      <!-- Login Form -->
+      <div id="login-form" class="hidden bg-slate-900 rounded-xl border border-slate-800 p-6 shadow-2xl">
+        <h2 class="text-base font-semibold text-white mb-4">Sign In</h2>
+        <label class="block text-sm font-medium text-slate-300 mb-1">Username</label>
+        <input id="login-user" type="text" class="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2.5 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 placeholder-slate-500" placeholder="Username">
+        <label class="block text-sm font-medium text-slate-300 mb-1">PIN</label>
+        <input id="login-pin" type="password" class="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2.5 text-sm mb-5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 placeholder-slate-500" placeholder="Enter PIN">
+        <button id="login-btn" class="w-full bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-blue-500 transition-colors shadow-lg shadow-blue-600/20">Sign In</button>
+        <p id="login-error" class="text-xs text-red-400 mt-2 hidden"></p>
+      </div>
+
+      <div class="mt-4 p-3 bg-amber-950/40 border border-amber-800/50 rounded-lg">
+        <p class="text-xs text-amber-400/80"><strong class="text-amber-400">HIPAA Notice:</strong> This system processes Protected Health Information (PHI). All access is logged. Unauthorized access is prohibited.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN APP (hidden until auth) ==================== -->
+  <div id="app-container" class="hidden">
+    <!-- Header -->
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">AO</div>
+          <div>
+            <h1 class="text-lg font-semibold text-slate-900 dark:text-white">ABA Observer</h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400">HIPAA-Secured</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div id="provider-status" class="hidden sm:flex items-center gap-4 text-xs"></div>
+          <span id="session-timer" class="text-xs text-slate-400 dark:text-slate-500 hidden sm:inline"></span>
+          <span id="user-badge" class="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded font-medium"></span>
+          <button id="dark-toggle" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" title="Toggle dark mode">
+            <svg class="w-5 h-5 hidden dark:block text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            <svg class="w-5 h-5 block dark:hidden text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+          </button>
+          <button id="logout-btn" class="text-xs text-red-500 hover:text-red-700 font-medium">Logout</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Tabs -->
+    <nav class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 flex gap-6">
+        <button class="tab-btn tab-active py-3 text-sm font-medium" data-tab="upload">Upload</button>
+        <button class="tab-btn py-3 text-sm font-medium text-slate-500 dark:text-slate-400" data-tab="camera">Live Camera</button>
+        <button class="tab-btn py-3 text-sm font-medium text-slate-500 dark:text-slate-400" data-tab="data">Collected Data</button>
+        <button class="tab-btn py-3 text-sm font-medium text-slate-500 dark:text-slate-400" data-tab="audit" id="audit-tab-btn">Audit Log</button>
+      </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+      <!-- HIPAA Cloud Warning Banner -->
+      <div id="hipaa-warning" class="hidden mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
+        <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+        <p class="text-xs text-red-700 dark:text-red-400"><strong>HIPAA Warning:</strong> Gemini (Cloud) sends video to Google servers without a BAA. Use <strong>Qwen (Local)</strong> for HIPAA-compliant analysis of real client sessions. Gemini is acceptable for testing with non-PHI content only.</p>
+      </div>
+
+      <!-- ==================== UPLOAD TAB ==================== -->
+      <div id="tab-upload" class="tab-panel fade-in">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+            <h2 class="text-base font-semibold mb-4">Upload Session Video</h2>
+            <div id="drop-zone" class="drop-zone border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-10 text-center cursor-pointer hover:border-blue-400 transition-colors">
+              <svg class="w-10 h-10 mx-auto text-slate-400 dark:text-slate-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+              <p class="text-sm text-slate-600 dark:text-slate-300 font-medium">Drop video file here or click to browse</p>
+              <p class="text-xs text-slate-400 mt-1">MP4, MOV, AVI, WebM</p>
+              <input type="file" id="file-input" accept="video/*" class="hidden">
+            </div>
+            <div id="file-info" class="hidden mt-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-lg flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                <span id="file-name" class="text-sm font-medium"></span>
+                <span id="file-size" class="text-xs text-slate-400"></span>
+              </div>
+              <button id="clear-file" class="text-xs text-red-500 hover:text-red-700">Remove</button>
+            </div>
+          </div>
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+            <h2 class="text-base font-semibold mb-4">Settings</h2>
+            <label class="block text-sm font-medium mb-1">AI Provider</label>
+            <select id="provider-select" class="provider-sel w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm mb-4">
+              <option value="gemini">Gemini (Cloud)</option>
+              <option value="qwen">Qwen2.5-Omni (Local/HIPAA-Safe)</option>
+            </select>
+            <label class="block text-sm font-medium mb-1">Client Config</label>
+            <select id="config-select" class="config-sel w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm mb-4">
+              <option value="">No config (generic)</option>
+            </select>
+            <div id="config-preview" class="hidden text-xs text-slate-500 mb-4 p-2 bg-slate-50 dark:bg-slate-700 rounded"></div>
+            <button id="analyze-btn" disabled class="w-full bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">Analyze Session</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== CAMERA TAB ==================== -->
+      <div id="tab-camera" class="tab-panel hidden fade-in">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-base font-semibold">Live Camera</h2>
+              <div id="rec-indicator" class="hidden flex items-center gap-1.5 text-xs text-red-500 font-medium">
+                <span class="w-2.5 h-2.5 bg-red-500 rounded-full rec-pulse"></span>REC <span id="rec-timer">00:00</span>
+              </div>
+            </div>
+            <div class="relative bg-black rounded-lg overflow-hidden aspect-video mb-4">
+              <video id="camera-preview" autoplay muted playsinline class="w-full h-full object-cover"></video>
+              <div id="camera-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                <p class="text-sm">Camera not started</p>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <button id="cam-start" class="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-blue-700">Start Camera</button>
+              <button id="cam-record" disabled class="flex-1 bg-red-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed">Record</button>
+              <button id="cam-stop" disabled class="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed">Stop & Analyze</button>
+            </div>
+            <div class="mt-3">
+              <label class="block text-xs text-slate-500 mb-1">Camera Source</label>
+              <select id="cam-source" class="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm"><option>Loading...</option></select>
+            </div>
+          </div>
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+            <h2 class="text-base font-semibold mb-4">Camera Settings</h2>
+            <label class="block text-sm font-medium mb-1">AI Provider</label>
+            <select id="cam-provider" class="provider-sel w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm mb-4">
+              <option value="gemini">Gemini (Cloud)</option>
+              <option value="qwen">Qwen2.5-Omni (Local/HIPAA-Safe)</option>
+            </select>
+            <label class="block text-sm font-medium mb-1">Client Config</label>
+            <select id="cam-config" class="config-sel w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm mb-4">
+              <option value="">No config (generic)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== DATA TAB ==================== -->
+      <div id="tab-data" class="tab-panel hidden fade-in">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold">Collected Data</h2>
+          <button id="refresh-data" class="text-xs border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700">Refresh</button>
+        </div>
+        <div id="data-list" class="space-y-3"><p class="text-sm text-slate-400">Loading...</p></div>
+      </div>
+
+      <!-- ==================== AUDIT TAB ==================== -->
+      <div id="tab-audit" class="tab-panel hidden fade-in">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold">Audit Log</h2>
+          <button id="refresh-audit" class="text-xs border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700">Refresh</button>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div id="audit-log" class="max-h-[500px] overflow-y-auto"></div>
+        </div>
+      </div>
+
+      <!-- Loading / Results / Error (same as before) -->
+      <div id="loading-section" class="hidden fade-in">
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-10 text-center">
+          <div class="spinner mx-auto mb-4"></div>
+          <p class="text-sm font-medium">Analyzing session video...</p>
+          <p class="text-xs text-slate-400 mt-1">1-3 minutes depending on video length</p>
+          <div id="loading-steps" class="mt-4 text-xs text-slate-500 space-y-1"></div>
+        </div>
+      </div>
+
+      <div id="results-section" class="hidden fade-in space-y-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold">Analysis Results</h2>
+          <div class="flex gap-2">
+            <button id="download-json" class="text-xs border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700">Download JSON</button>
+            <button id="back-btn" class="text-xs bg-blue-600 text-white rounded-lg px-3 py-1.5 hover:bg-blue-700">Back</button>
+          </div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+          <h3 class="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wide">Session Summary</h3>
+          <div id="session-summary" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+          <p id="session-notes" class="mt-3 text-sm text-slate-600 dark:text-slate-400"></p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+          <h3 class="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wide">ABC Chains</h3>
+          <div id="abc-chains" class="space-y-3"></div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+            <h3 class="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wide">Behavior Frequencies</h3>
+            <div id="frequency-summary"></div>
+          </div>
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+            <h3 class="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wide">Prompt Level Distribution</h3>
+            <div id="prompt-distribution"></div>
+          </div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+          <h3 class="text-sm font-semibold text-slate-500 mb-3 uppercase tracking-wide">Event Timeline</h3>
+          <div id="event-timeline" class="max-h-96 overflow-y-auto"></div>
+        </div>
+      </div>
+
+      <div id="error-section" class="hidden fade-in">
+        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
+          <p class="text-sm font-medium text-red-700 dark:text-red-400" id="error-message"></p>
+          <button id="retry-btn" class="mt-3 text-xs bg-red-600 text-white rounded-lg px-4 py-2 hover:bg-red-700">Try Again</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+<script>
+// ====== DARK MODE ======
+const html = document.documentElement;
+if (localStorage.getItem('dark')==='true' || (!localStorage.getItem('dark') && matchMedia('(prefers-color-scheme:dark)').matches)) html.classList.add('dark');
+document.getElementById('dark-toggle').addEventListener('click', () => { html.classList.toggle('dark'); localStorage.setItem('dark', html.classList.contains('dark')); });
+
+// ====== AUTH STATE ======
+let authToken = sessionStorage.getItem('aba_token');
+let authUser = sessionStorage.getItem('aba_user') || '';
+let authRole = sessionStorage.getItem('aba_role') || '';
+let sessionTimeout = 900;
+let lastActivity = Date.now();
+let sessionTimerInterval = null;
+
+function authHeaders() { return { 'Authorization': `Bearer ${authToken}` }; }
+function authedFetch(url, opts={}) {
+  lastActivity = Date.now();
+  opts.headers = { ...(opts.headers||{}), ...authHeaders() };
+  return fetch(url, opts);
+}
+
+// ====== SESSION TIMEOUT ======
+function startSessionTimer() {
+  const timerEl = document.getElementById('session-timer');
+  sessionTimerInterval = setInterval(async () => {
+    const elapsed = Math.floor((Date.now() - lastActivity) / 1000);
+    const remaining = sessionTimeout - elapsed;
+    if (remaining <= 0) {
+      logout('Session expired due to inactivity');
+      return;
+    }
+    const m = String(Math.floor(remaining/60)).padStart(2,'0');
+    const s = String(remaining%60).padStart(2,'0');
+    timerEl.textContent = `${m}:${s}`;
+    // Refresh token at halfway point
+    if (remaining === Math.floor(sessionTimeout/2)) {
+      try {
+        const res = await fetch('/api/auth/refresh', { method:'POST', headers: authHeaders() });
+        if (res.ok) { const d = await res.json(); authToken = d.token; sessionStorage.setItem('aba_token', authToken); }
+      } catch(e) {}
+    }
+  }, 1000);
+}
+
+// Reset timer on any user interaction
+['click','keydown','mousemove','touchstart'].forEach(evt => {
+  document.addEventListener(evt, () => { lastActivity = Date.now(); }, { passive:true });
+});
+
+// ====== LOGIN/LOGOUT ======
+async function checkAuth() {
+  const res = await fetch('/api/auth/status');
+  const data = await res.json();
+  sessionTimeout = data.session_timeout || 900;
+
+  if (data.setup_required) {
+    document.getElementById('setup-form').classList.remove('hidden');
+    document.getElementById('login-form').classList.add('hidden');
+  } else {
+    document.getElementById('setup-form').classList.add('hidden');
+    document.getElementById('login-form').classList.remove('hidden');
+  }
+
+  if (authToken) {
+    // Verify existing token
+    try {
+      const r = await fetch('/api/auth/refresh', { method:'POST', headers: authHeaders() });
+      if (r.ok) { const d = await r.json(); authToken = d.token; sessionStorage.setItem('aba_token', authToken); enterApp(); return; }
+    } catch(e) {}
+    // Token invalid
+    authToken = null;
+    sessionStorage.removeItem('aba_token');
+  }
+
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('app-container').classList.add('hidden');
+}
+
+function enterApp() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-container').classList.remove('hidden');
+  document.getElementById('user-badge').textContent = `${authUser} (${authRole})`;
+  // Hide audit tab for non-admins
+  document.getElementById('audit-tab-btn').classList.toggle('hidden', authRole !== 'admin');
+  lastActivity = Date.now();
+  startSessionTimer();
+  loadProviders();
+  loadConfigs();
+}
+
+function logout(reason) {
+  clearInterval(sessionTimerInterval);
+  authToken = null; authUser = ''; authRole = '';
+  sessionStorage.removeItem('aba_token');
+  sessionStorage.removeItem('aba_user');
+  sessionStorage.removeItem('aba_role');
+  document.getElementById('app-container').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  if (reason) { const el = document.getElementById('login-error'); el.textContent = reason; el.classList.remove('hidden'); }
+  checkAuth();
+}
+
+document.getElementById('logout-btn').addEventListener('click', () => logout());
+
+document.getElementById('setup-btn').addEventListener('click', async () => {
+  const user = document.getElementById('setup-user').value.trim();
+  const pin = document.getElementById('setup-pin').value;
+  const errEl = document.getElementById('setup-error');
+  try {
+    const res = await fetch('/api/auth/setup', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:user, pin}) });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error; errEl.classList.remove('hidden'); return; }
+    authToken = data.token; authUser = data.username; authRole = data.role;
+    sessionStorage.setItem('aba_token', authToken);
+    sessionStorage.setItem('aba_user', authUser);
+    sessionStorage.setItem('aba_role', authRole);
+    enterApp();
+  } catch(e) { errEl.textContent = e.message; errEl.classList.remove('hidden'); }
+});
+
+document.getElementById('login-btn').addEventListener('click', async () => {
+  const user = document.getElementById('login-user').value.trim();
+  const pin = document.getElementById('login-pin').value;
+  const errEl = document.getElementById('login-error');
+  try {
+    const res = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:user, pin}) });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error; errEl.classList.remove('hidden'); return; }
+    authToken = data.token; authUser = data.username; authRole = data.role;
+    sessionStorage.setItem('aba_token', authToken);
+    sessionStorage.setItem('aba_user', authUser);
+    sessionStorage.setItem('aba_role', authRole);
+    enterApp();
+  } catch(e) { errEl.textContent = e.message; errEl.classList.remove('hidden'); }
+});
+
+// Allow Enter key on PIN fields
+document.getElementById('login-pin').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-btn').click(); });
+document.getElementById('setup-pin').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('setup-btn').click(); });
+
+// ====== HIPAA WARNING ======
+document.querySelectorAll('.provider-sel').forEach(sel => {
+  sel.addEventListener('change', () => {
+    const anyGemini = [...document.querySelectorAll('.provider-sel')].some(s => s.value === 'gemini');
+    document.getElementById('hipaa-warning').classList.toggle('hidden', !anyGemini);
+  });
+});
+
+// ====== TABS ======
+let currentTab = 'upload', previousTab = 'upload';
+document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => { b.classList.toggle('tab-active', b.dataset.tab===tab); b.classList.toggle('text-slate-500', b.dataset.tab!==tab); });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+  const panel = document.getElementById(`tab-${tab}`);
+  if (panel) panel.classList.remove('hidden');
+  ['loading-section','results-section','error-section'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  if (tab==='data') loadHistory();
+  if (tab==='camera') enumerateCameras();
+  if (tab==='audit') loadAuditLog();
+}
+
+function showSection(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+  ['loading-section','results-section','error-section'].forEach(s => document.getElementById(s).classList.toggle('hidden', s!==id));
+}
+
+// ====== PROVIDERS & CONFIGS ======
+let analysisResults = null, selectedFile = null;
+
+async function loadProviders() {
+  try {
+    const providers = await (await authedFetch('/api/providers')).json();
+    document.getElementById('provider-status').innerHTML = providers.map(p => `
+      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${p.available?'bg-green-500':'bg-red-400'}"></span><span>${p.label}</span></span>
+    `).join('');
+    document.querySelectorAll('.provider-sel').forEach(sel => {
+      providers.forEach(p => { const opt = sel.querySelector(`option[value="${p.name}"]`); if(opt&&!p.available) opt.disabled=true; });
+    });
+  } catch(e) { if(e.message?.includes('401')) logout('Session expired'); }
+}
+
+async function loadConfigs() {
+  try {
+    const configs = await (await authedFetch('/api/configs')).json();
+    document.querySelectorAll('.config-sel').forEach(sel => {
+      // Clear existing options except first
+      while(sel.options.length > 1) sel.remove(1);
+      configs.forEach(c => { const o = document.createElement('option'); o.value=c.filename; o.textContent=`${c.client_id} (${c.targets}T, ${c.replacements}R)`; sel.appendChild(o); });
+    });
+  } catch(e) {}
+}
+
+document.getElementById('config-select').addEventListener('change', async function() {
+  const preview = document.getElementById('config-preview');
+  if (!this.value) { preview.classList.add('hidden'); return; }
+  try { const d = await (await authedFetch(`/api/configs/${this.value}`)).json(); preview.innerHTML=`<strong>Tracking:</strong> ${(d.behavior_targets||[]).map(t=>t.name).join(', ')}`; preview.classList.remove('hidden'); } catch(e) { preview.classList.add('hidden'); }
+});
+
+// ====== FILE UPLOAD ======
+const dropZone=document.getElementById('drop-zone'), fileInput=document.getElementById('file-input');
+dropZone.addEventListener('click', ()=>fileInput.click());
+dropZone.addEventListener('dragover', e=>{e.preventDefault();dropZone.classList.add('dragover')});
+dropZone.addEventListener('dragleave', ()=>dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e=>{e.preventDefault();dropZone.classList.remove('dragover');if(e.dataTransfer.files.length)setFile(e.dataTransfer.files[0])});
+fileInput.addEventListener('change', ()=>{if(fileInput.files.length)setFile(fileInput.files[0])});
+document.getElementById('clear-file').addEventListener('click', clearFile);
+
+function setFile(f){selectedFile=f;document.getElementById('file-name').textContent=f.name;document.getElementById('file-size').textContent=`(${(f.size/1024/1024).toFixed(1)} MB)`;document.getElementById('file-info').classList.remove('hidden');document.getElementById('analyze-btn').disabled=false}
+function clearFile(){selectedFile=null;fileInput.value='';document.getElementById('file-info').classList.add('hidden');document.getElementById('analyze-btn').disabled=true}
+
+document.getElementById('analyze-btn').addEventListener('click', async()=>{
+  if(!selectedFile)return; previousTab='upload'; showSection('loading-section');
+  document.getElementById('loading-steps').innerHTML='<p>Uploading video (encrypted in transit)...</p>';
+  const fd=new FormData(); fd.append('video',selectedFile); fd.append('provider',document.getElementById('provider-select').value); fd.append('config',document.getElementById('config-select').value);
+  try{
+    document.getElementById('loading-steps').innerHTML+='<p>Processing with AI model...</p>';
+    const res=await fetch('/api/analyze',{method:'POST',body:fd,headers:authHeaders()});
+    if(!res.ok)throw new Error((await res.json()).error||'Analysis failed');
+    const data=await res.json(); analysisResults=data; renderResults(data);
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.add('hidden'));
+    document.getElementById('loading-section').classList.add('hidden'); document.getElementById('results-section').classList.remove('hidden');
+  }catch(e){document.getElementById('error-message').textContent=e.message;showSection('error-section')}
+});
+
+// ====== CAMERA ======
+let cameraStream=null, mediaRecorder=null, recordedChunks=[], recStartTime=null, recTimerInterval=null;
+
+async function enumerateCameras(){
+  try{ const s=await navigator.mediaDevices.getUserMedia({video:true,audio:true}); s.getTracks().forEach(t=>t.stop());
+    const devs=await navigator.mediaDevices.enumerateDevices(); const sel=document.getElementById('cam-source'); sel.innerHTML='';
+    devs.filter(d=>d.kind==='videoinput').forEach((d,i)=>{const o=document.createElement('option');o.value=d.deviceId;o.textContent=d.label||`Camera ${i+1}`;sel.appendChild(o)});
+  }catch(e){document.getElementById('cam-source').innerHTML='<option>Camera access denied</option>'}
+}
+
+document.getElementById('cam-start').addEventListener('click', async()=>{
+  try{ const did=document.getElementById('cam-source').value;
+    cameraStream=await navigator.mediaDevices.getUserMedia({video:did?{deviceId:{exact:did}}:true,audio:true});
+    document.getElementById('camera-preview').srcObject=cameraStream; document.getElementById('camera-placeholder').classList.add('hidden'); document.getElementById('cam-record').disabled=false; document.getElementById('cam-start').textContent='Restart';
+  }catch(e){alert('Camera error: '+e.message)}
+});
+
+document.getElementById('cam-record').addEventListener('click', ()=>{
+  if(!cameraStream)return; recordedChunks=[];
+  const mime=MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')?'video/webm;codecs=vp9,opus':MediaRecorder.isTypeSupported('video/webm')?'video/webm':'video/mp4';
+  mediaRecorder=new MediaRecorder(cameraStream,{mimeType:mime}); mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recordedChunks.push(e.data)}; mediaRecorder.start(1000);
+  recStartTime=Date.now(); recTimerInterval=setInterval(()=>{const el=Math.floor((Date.now()-recStartTime)/1000);document.getElementById('rec-timer').textContent=`${String(Math.floor(el/60)).padStart(2,'0')}:${String(el%60).padStart(2,'0')}`},500);
+  document.getElementById('rec-indicator').classList.remove('hidden'); document.getElementById('cam-record').disabled=true; document.getElementById('cam-stop').disabled=false;
+});
+
+document.getElementById('cam-stop').addEventListener('click', ()=>{
+  if(!mediaRecorder||mediaRecorder.state==='inactive')return;
+  mediaRecorder.onstop=async()=>{
+    clearInterval(recTimerInterval); document.getElementById('rec-indicator').classList.add('hidden'); document.getElementById('cam-stop').disabled=true; document.getElementById('cam-record').disabled=false;
+    const blob=new Blob(recordedChunks,{type:mediaRecorder.mimeType}); previousTab='camera'; showSection('loading-section');
+    document.getElementById('loading-steps').innerHTML='<p>Processing recorded session...</p>';
+    const fd=new FormData(); fd.append('recording',blob,`recording.${mediaRecorder.mimeType.includes('webm')?'webm':'mp4'}`); fd.append('provider',document.getElementById('cam-provider').value); fd.append('config',document.getElementById('cam-config').value); fd.append('source','camera');
+    try{const res=await fetch('/api/analyze-recording',{method:'POST',body:fd,headers:authHeaders()});if(!res.ok)throw new Error((await res.json()).error||'Failed');
+      const data=await res.json();analysisResults=data;renderResults(data);document.querySelectorAll('.tab-panel').forEach(p=>p.classList.add('hidden'));document.getElementById('loading-section').classList.add('hidden');document.getElementById('results-section').classList.remove('hidden');
+    }catch(e){document.getElementById('error-message').textContent=e.message;showSection('error-section')}
+  }; mediaRecorder.stop();
+});
+
+// ====== DATA HISTORY ======
+async function loadHistory(){
+  const c=document.getElementById('data-list');
+  try{const items=await(await authedFetch('/api/history')).json();
+    if(!items.length){c.innerHTML='<div class="text-center py-10 text-slate-400"><p>No collected data yet.</p></div>';return}
+    c.innerHTML=items.map(item=>{
+      const date=item.analyzed_at?new Date(item.analyzed_at).toLocaleString():item.filename;
+      const src=item.source==='camera'?'cam':'file';
+      return `<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between">
+        <div><p class="text-sm font-medium">${date}</p><p class="text-xs text-slate-400">${item.setting||'Session'} &middot; ${item.events} events &middot; ${item.chains} chains &middot; ${item.provider} &middot; ${src}${item.analyzed_by?' &middot; by '+item.analyzed_by:''}</p></div>
+        <div class="flex gap-2"><button class="view-result text-xs text-blue-600 font-medium" data-file="${item.filename}">View</button><button class="delete-result text-xs text-red-400 hover:text-red-600" data-file="${item.filename}">Delete</button></div>
+      </div>`;
+    }).join('');
+    c.querySelectorAll('.view-result').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();try{const d=await(await authedFetch(`/api/history/${b.dataset.file}`)).json();previousTab='data';analysisResults=d;renderResults(d);document.querySelectorAll('.tab-panel').forEach(p=>p.classList.add('hidden'));document.getElementById('results-section').classList.remove('hidden')}catch(e){}}));
+    c.querySelectorAll('.delete-result').forEach(b=>b.addEventListener('click',async e=>{e.stopPropagation();if(!confirm('Delete?'))return;await authedFetch(`/api/history/${b.dataset.file}`,{method:'DELETE'});loadHistory()}));
+  }catch(e){c.innerHTML=`<p class="text-red-500 text-sm">${e.message}</p>`}
+}
+document.getElementById('refresh-data').addEventListener('click', loadHistory);
+
+// ====== AUDIT LOG ======
+async function loadAuditLog(){
+  const c=document.getElementById('audit-log');
+  try{const events=await(await authedFetch('/api/audit')).json();
+    if(!events.length){c.innerHTML='<p class="p-4 text-sm text-slate-400">No audit events yet.</p>';return}
+    const colors={login:'text-green-600',login_failed:'text-red-600',access_denied:'text-red-600',analyze_upload:'text-blue-600',analyze_camera:'text-blue-600',view_result:'text-slate-500',delete_result:'text-orange-600',create_user:'text-purple-600',logout:'text-slate-400'};
+    c.innerHTML=`<table class="w-full text-xs"><thead class="bg-slate-50 dark:bg-slate-700 text-left text-slate-500 uppercase tracking-wide"><tr><th class="px-4 py-2">Time</th><th class="px-4 py-2">Action</th><th class="px-4 py-2">User</th><th class="px-4 py-2">IP</th><th class="px-4 py-2">Details</th></tr></thead><tbody>${events.map(e=>`<tr class="border-b border-slate-100 dark:border-slate-700"><td class="px-4 py-2 text-slate-500">${new Date(e.timestamp).toLocaleString()}</td><td class="px-4 py-2 font-medium ${colors[e.action]||''}">${e.action}</td><td class="px-4 py-2">${e.user}</td><td class="px-4 py-2 text-slate-400">${e.ip}</td><td class="px-4 py-2 text-slate-400 max-w-xs truncate">${JSON.stringify(e.details)}</td></tr>`).join('')}</tbody></table>`;
+  }catch(e){c.innerHTML=`<p class="p-4 text-sm text-red-500">${e.message}</p>`}
+}
+document.getElementById('refresh-audit').addEventListener('click', loadAuditLog);
+
+// ====== RESULTS RENDERING (same logic, abbreviated) ======
+document.getElementById('back-btn').addEventListener('click', ()=>switchTab(previousTab));
+document.getElementById('retry-btn').addEventListener('click', ()=>switchTab(previousTab));
+document.getElementById('download-json').addEventListener('click', ()=>{if(!analysisResults)return;const b=new Blob([JSON.stringify(analysisResults,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`aba_observation_${new Date().toISOString().slice(0,10)}.json`;a.click()});
+
+function renderResults(data){
+  const r=data.results||data, session=r.session_summary||{};
+  const items=[{l:'Setting',v:session.setting||'N/A'},{l:'People',v:(session.people_present||[]).join(', ')||'N/A'},{l:'Duration',v:session.duration_seconds?`${Math.floor(session.duration_seconds/60)}m ${Math.round(session.duration_seconds%60)}s`:'N/A'},{l:'Events',v:(r.events||[]).length}];
+  document.getElementById('session-summary').innerHTML=items.map(i=>`<div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3"><p class="text-xs text-slate-500 uppercase tracking-wide">${i.l}</p><p class="text-sm font-medium mt-1">${i.v}</p></div>`).join('');
+  document.getElementById('session-notes').textContent=session.overall_notes||'';
+
+  const chains=r.abc_chains||[], chainsEl=document.getElementById('abc-chains');
+  chainsEl.innerHTML=!chains.length?'<p class="text-sm text-slate-400">No ABC chains</p>':chains.map((ch,i)=>{const a=ch.antecedent||{},b=ch.behavior||{},c=ch.consequence||{};return`<div class="border border-slate-200 dark:border-slate-600 rounded-lg p-4"><div class="text-xs font-semibold text-slate-400 mb-2">Chain ${i+1}</div><div class="grid grid-cols-1 sm:grid-cols-3 gap-3"><div class="bg-blue-50 dark:bg-blue-900/30 rounded p-2.5"><span class="text-xs font-bold text-blue-600 dark:text-blue-400 block mb-1">A</span><span class="text-xs">[${a.timestamp||''}] ${a.description||'N/A'}</span></div><div class="bg-amber-50 dark:bg-amber-900/30 rounded p-2.5"><span class="text-xs font-bold text-amber-600 dark:text-amber-400 block mb-1">B</span><span class="text-xs">[${b.timestamp||''}] ${b.description||'N/A'}</span>${b.target?`<span class="text-xs text-amber-500 block mt-1">${b.target}</span>`:''}</div><div class="bg-green-50 dark:bg-green-900/30 rounded p-2.5"><span class="text-xs font-bold text-green-600 dark:text-green-400 block mb-1">C</span><span class="text-xs">[${c.timestamp||''}] ${c.description||'N/A'}</span></div></div></div>`}).join('');
+
+  const freq=r.frequency_summary||{}, fk=Object.keys(freq), freqEl=document.getElementById('frequency-summary');
+  if(!fk.length){freqEl.innerHTML='<p class="text-sm text-slate-400">No data</p>'}else{const mx=Math.max(...fk.map(k=>typeof freq[k]==='object'?freq[k].count:freq[k]),1);freqEl.innerHTML=fk.map(k=>{const c=typeof freq[k]==='object'?freq[k].count:freq[k];return`<div class="mb-2"><div class="flex justify-between text-xs mb-1"><span class="font-medium capitalize">${k.replace(/_/g,' ')}</span><span class="text-slate-500">${c}</span></div><div class="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden"><div class="h-full bg-blue-500 rounded-full" style="width:${(c/mx)*100}%"></div></div></div>`}).join('')}
+
+  const pr=r.prompt_level_distribution||{}, pk=Object.keys(pr).filter(k=>pr[k]), pEl=document.getElementById('prompt-distribution');
+  if(!pk.length){pEl.innerHTML='<p class="text-sm text-slate-400">No data</p>'}else{const cl={independent:'bg-green-500',gestural:'bg-blue-400',model:'bg-yellow-400',partial_physical:'bg-orange-400',full_physical:'bg-red-400'},tot=pk.reduce((s,k)=>s+pr[k],0);pEl.innerHTML=`<div class="flex h-6 rounded-full overflow-hidden mb-3">${pk.map(k=>`<div class="${cl[k]||'bg-slate-300'}" style="width:${(pr[k]/tot)*100}%"></div>`).join('')}</div>${pk.map(k=>`<div class="flex items-center justify-between text-xs mb-1"><span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${cl[k]||'bg-slate-300'}"></span><span class="capitalize">${k.replace(/_/g,' ')}</span></span><span class="text-slate-500">${pr[k]} (${Math.round((pr[k]/tot)*100)}%)</span></div>`).join('')}`}
+
+  const ev=r.events||[], tEl=document.getElementById('event-timeline');
+  if(!ev.length){tEl.innerHTML='<p class="text-sm text-slate-400">No events</p>'}else{const tc={antecedent:'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',behavior:'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',consequence:'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',intervention:'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400',other:'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'};tEl.innerHTML=`<table class="w-full text-xs"><thead class="text-left text-slate-500 uppercase tracking-wide border-b border-slate-200 dark:border-slate-700"><tr><th class="py-2 pr-2 w-16">Time</th><th class="py-2 pr-2 w-24">Type</th><th class="py-2 pr-2 w-28">Category</th><th class="py-2">Description</th></tr></thead><tbody>${ev.map(e=>`<tr class="border-b border-slate-100 dark:border-slate-700/50"><td class="py-2 pr-2 font-mono text-slate-500">${e.timestamp||''}</td><td class="py-2 pr-2"><span class="px-1.5 py-0.5 rounded ${tc[e.event_type]||tc.other}">${e.event_type||''}</span></td><td class="py-2 pr-2 capitalize">${(e.category||'').replace(/_/g,' ')}</td><td class="py-2">${e.description||''}</td></tr>`).join('')}</tbody></table>`}
+}
+
+// ====== INIT ======
+checkAuth();
+</script>
+</body>
+</html>
