@@ -1,8 +1,9 @@
-# ABA Observer — HIPAA-Secured AI Behavioral Data Collection
+# The I — Intelligent Video Analytics
 
 ## Overview
-AI-assisted ABA session observation using multimodal models.
-Analyzes video+audio to produce structured ABC (Antecedent-Behavior-Consequence) data.
+Multi-domain AI video analytics platform with privacy-first architecture.
+Self-hosted, camera-agnostic, consent-based facial recognition.
+Domains: ABA therapy, retail/hospitality, security, custom.
 HIPAA-compliant: encrypted storage, auth, audit logging, TLS.
 
 ## Tech Stack

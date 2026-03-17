@@ -1,10 +1,10 @@
-# Observer Platform — System Specification
+# The I — System Specification
 
-> Multi-domain AI video analytics platform with privacy-first architecture.
+> Intelligent Video Analytics: Multi-domain AI video analytics platform with privacy-first architecture.
 > Self-hosted, camera-agnostic, consent-based facial recognition.
 
-**Version:** 0.5.0 (spec)
-**Status:** ABA domain MVP complete. Platform architecture in design.
+**Version:** 0.5.0
+**Status:** Phases 1-5 complete. ABA, CV, face recognition, retail domain, advanced ABA all implemented.
 
 ---
 
@@ -24,7 +24,7 @@ A single self-hosted platform that processes video feeds from any camera system 
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    OBSERVER PLATFORM                     │
+│                    THE I — INTELLIGENT VIDEO ANALYTICS                     │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
@@ -500,7 +500,7 @@ Camera Frame → CV Pipeline → Event → Time-Series DB → Dashboard
 
 ## 10. Roadmap
 
-### Phase 1 — ABA Observer MVP (COMPLETE)
+### Phase 1 — ABA MVP (COMPLETE)
 - [x] Video upload + AI analysis (Gemini, Qwen)
 - [x] ABC chain detection, frequency counting
 - [x] HIPAA security stack (auth, encryption, audit, TLS)
@@ -688,7 +688,7 @@ observer/
 
 ## 12. Competitive Position
 
-| Feature | Observer | Verkada | Spot AI | RetailNext | March Networks | Genetec | Frigate |
+| Feature | The I | Verkada | Spot AI | RetailNext | March Networks | Genetec | Frigate |
 |---------|----------|---------|---------|------------|----------------|---------|---------|
 | Self-hosted | Yes | No | Hybrid | No | Hybrid | Yes | Yes |
 | ABA therapy analytics | Yes | No | No | No | No | No | No |

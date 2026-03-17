@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ABA Observer — AI-powered behavioral data collection from video sessions.
+"""The I — Intelligent Video Analytics. AI-powered data collection from video sessions.
 
 Analyzes video+audio of ABA therapy sessions using multimodal AI models
 to produce structured ABC (Antecedent-Behavior-Consequence) data.
@@ -200,7 +200,7 @@ def cmd_providers(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="ABA Observer — AI-powered behavioral data collection",
+        description="The I — Intelligent Video Analytics",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

@@ -23,7 +23,7 @@ def ensure_certs() -> tuple[str, str]:
             "-out", str(cert_path),
             "-days", "365",
             "-nodes",
-            "-subj", "/CN=aba-observer/O=ABA Observer/C=US",
+            "-subj", "/CN=the-i/O=The I/C=US",
         ], check=True, capture_output=True)
         print("[tls] Certificate generated successfully.")
     except (subprocess.CalledProcessError, FileNotFoundError):

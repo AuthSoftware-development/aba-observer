@@ -1,4 +1,4 @@
-"""FastAPI server for ABA Observer — HIPAA-secured web UI."""
+"""FastAPI server for The I — Intelligent Video Analytics."""
 
 import json
 import os
@@ -49,7 +49,7 @@ if not check_models():
     print("[startup] Downloading CV model files...")
     download_models()
 
-app = FastAPI(title="ABA Observer", version="0.5.0")
+app = FastAPI(title="The I — Intelligent Video Analytics", version="0.5.0")
 
 BEHAVIOR_LIBRARY_PATH = Path(__file__).parent / "configs" / "behavior_library.json"
 
@@ -1505,7 +1505,7 @@ if __name__ == "__main__":
     cert_path, key_path = ensure_certs()
 
     print("\n" + "=" * 50)
-    print("  ABA Observer — HIPAA-Secured")
+    print("  The I — Intelligent Video Analytics")
     print("=" * 50)
 
     if cert_path and key_path:
