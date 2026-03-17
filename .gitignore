@@ -23,4 +23,5 @@ audit_logs/
 pos_data/
 alerts/
 access_events/
+.search.db
 **/models/*.t7
