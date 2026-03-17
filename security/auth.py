@@ -124,6 +124,18 @@ def verify_token(token: str) -> dict | None:
         return None
 
 
+def reset_pin(username: str, new_pin: str) -> bool:
+    """Reset a user's PIN. Returns True if successful."""
+    users = _load_users()
+    if username not in users:
+        return False
+    salt = secrets.token_hex(16)
+    users[username]["pin_hash"] = _hash_pin(new_pin, salt)
+    users[username]["salt"] = salt
+    _save_users(users)
+    return True
+
+
 def refresh_token(token: str) -> str | None:
     """Refresh a valid token (extend expiry). Returns new token or None."""
     payload = verify_token(token)

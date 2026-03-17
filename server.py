@@ -18,6 +18,7 @@ from security.auth import (
     create_token,
     create_user,
     refresh_token,
+    reset_pin,
     setup_required,
     verify_pin,
     verify_token,
@@ -189,6 +190,45 @@ async def auth_create_user(request: Request, authorization: str | None = Header(
     log_event("create_user", user=user["sub"], role=user["role"], ip=_client_ip(request),
               details={"new_user": username, "new_role": role})
     return {"created": username, "role": role}
+
+
+@app.post("/api/auth/reset-pin")
+async def auth_reset_pin(request: Request, authorization: str | None = Header(None)):
+    """Reset a user's PIN. Admins can reset any user; users can reset their own."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+
+    body = await request.json()
+    target_user = body.get("username", "").strip()
+    current_pin = body.get("current_pin", "").strip()
+    new_pin = body.get("new_pin", "").strip()
+
+    if not new_pin or len(new_pin) < 4:
+        return JSONResponse({"error": "New PIN must be 4+ characters"}, status_code=400)
+
+    is_self = target_user == user["sub"]
+    is_admin = user["role"] == "admin"
+
+    if not target_user:
+        target_user = user["sub"]
+        is_self = True
+
+    # Non-admins can only reset their own PIN and must provide current PIN
+    if not is_admin:
+        if not is_self:
+            return JSONResponse({"error": "Only admins can reset other users' PINs"}, status_code=403)
+        if not current_pin:
+            return JSONResponse({"error": "Current PIN required"}, status_code=400)
+        if not verify_pin(target_user, current_pin):
+            return JSONResponse({"error": "Current PIN is incorrect"}, status_code=401)
+
+    if not reset_pin(target_user, new_pin):
+        return JSONResponse({"error": "User not found"}, status_code=404)
+
+    log_event("reset_pin", user=user["sub"], role=user["role"], ip=_client_ip(request),
+              details={"target_user": target_user, "self_reset": is_self})
+    return {"reset": target_user}
 
 
 # ====== PROTECTED ROUTES ======
