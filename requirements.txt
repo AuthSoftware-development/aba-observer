@@ -8,3 +8,5 @@ torch>=2.1.0
 accelerate>=0.30.0
 soundfile
 librosa
+opencv-python>=4.8.0
+scipy>=1.11.0

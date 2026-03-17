@@ -757,6 +757,186 @@ async def fuzzy_match_behavior(filename: str, request: Request, authorization: s
     return {"phrase": phrase, "matches": matches[:5]}
 
 
+# ====== CV PIPELINE ROUTES ======
+
+@app.post("/api/cv/analyze")
+async def cv_analyze_video(
+    request: Request,
+    video: UploadFile = File(...),
+    confidence: float = Form(0.5),
+    sample_fps: float = Form(5.0),
+    authorization: str | None = Header(None),
+):
+    """Run CV person detection + tracking on an uploaded video."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+
+    video_id = uuid.uuid4().hex[:8]
+    ext = Path(video.filename).suffix or ".mp4"
+    video_path = UPLOAD_DIR / f"cv_{video_id}{ext}"
+
+    with open(video_path, "wb") as f:
+        shutil.copyfileobj(video.file, f)
+
+    try:
+        from cv.pipeline import CVPipeline
+        pipeline = CVPipeline(confidence=confidence)
+        results = pipeline.analyze_video(video_path, sample_fps=sample_fps)
+
+        log_event("cv_analyze", user=user["sub"], role=user["role"], ip=_client_ip(request),
+                  details={
+                      "video": video.filename,
+                      "people_found": results["summary"]["total_unique_people"],
+                  })
+        return results
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+    finally:
+        secure_delete(video_path)
+
+
+@app.post("/api/cv/analyze-existing/{filename}")
+async def cv_analyze_existing(
+    filename: str,
+    request: Request,
+    confidence: float = 0.5,
+    sample_fps: float = 5.0,
+    authorization: str | None = Header(None),
+):
+    """Run CV analysis on a video already uploaded for AI analysis."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+
+    # Check uploads directory
+    video_path = UPLOAD_DIR / filename
+    if not video_path.exists():
+        return JSONResponse({"error": "Video not found"}, status_code=404)
+
+    try:
+        from cv.pipeline import CVPipeline
+        pipeline = CVPipeline(confidence=confidence)
+        results = pipeline.analyze_video(video_path, sample_fps=sample_fps)
+        return results
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ====== CAMERA MANAGEMENT ROUTES ======
+
+_camera_manager = None
+
+
+def _get_camera_manager():
+    global _camera_manager
+    if _camera_manager is None:
+        from ingest.rtsp import CameraManager
+        _camera_manager = CameraManager()
+    return _camera_manager
+
+
+@app.get("/api/cameras")
+async def list_cameras(request: Request, authorization: str | None = Header(None)):
+    """List all connected cameras."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+    return _get_camera_manager().list_cameras()
+
+
+@app.post("/api/cameras")
+async def add_camera(request: Request, authorization: str | None = Header(None)):
+    """Add and connect to an RTSP camera."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+    if user["role"] != "admin":
+        return JSONResponse({"error": "Admin only"}, status_code=403)
+
+    body = await request.json()
+    camera_id = body.get("camera_id", "").strip()
+    name = body.get("name", "").strip()
+    rtsp_url = body.get("rtsp_url", "").strip()
+
+    if not camera_id or not rtsp_url:
+        return JSONResponse({"error": "camera_id and rtsp_url required"}, status_code=400)
+
+    from ingest.rtsp import CameraConfig
+    config = CameraConfig(
+        camera_id=camera_id,
+        name=name or camera_id,
+        rtsp_url=rtsp_url,
+        fps_target=body.get("fps_target", 5.0),
+    )
+
+    try:
+        cam = _get_camera_manager().add_camera(config)
+        log_event("add_camera", user=user["sub"], role=user["role"], ip=_client_ip(request),
+                  details={"camera_id": camera_id, "name": name})
+        return cam.status()
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=409)
+
+
+@app.delete("/api/cameras/{camera_id}")
+async def remove_camera(camera_id: str, request: Request, authorization: str | None = Header(None)):
+    """Disconnect and remove a camera."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+    if user["role"] != "admin":
+        return JSONResponse({"error": "Admin only"}, status_code=403)
+
+    if _get_camera_manager().remove_camera(camera_id):
+        log_event("remove_camera", user=user["sub"], role=user["role"], ip=_client_ip(request),
+                  details={"camera_id": camera_id})
+        return {"removed": camera_id}
+    return JSONResponse({"error": "Camera not found"}, status_code=404)
+
+
+@app.get("/api/cameras/{camera_id}/snapshot")
+async def camera_snapshot(camera_id: str, request: Request, authorization: str | None = Header(None)):
+    """Get current frame from a camera as JPEG."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+
+    cam = _get_camera_manager().get_camera(camera_id)
+    if not cam:
+        return JSONResponse({"error": "Camera not found"}, status_code=404)
+
+    jpeg = cam.get_snapshot()
+    if not jpeg:
+        return JSONResponse({"error": "No frame available"}, status_code=503)
+
+    from fastapi.responses import Response
+    return Response(content=jpeg, media_type="image/jpeg")
+
+
+@app.get("/api/cameras/{camera_id}/cv")
+async def camera_cv_frame(camera_id: str, request: Request, authorization: str | None = Header(None)):
+    """Run CV detection on the latest frame from a camera."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+
+    cam = _get_camera_manager().get_camera(camera_id)
+    if not cam:
+        return JSONResponse({"error": "Camera not found"}, status_code=404)
+
+    frame = cam.latest_frame
+    if frame is None:
+        return JSONResponse({"error": "No frame available"}, status_code=503)
+
+    from cv.pipeline import CVPipeline
+    # Use a shared pipeline instance per camera in production;
+    # for now, create per-request (stateless detection is fine)
+    pipeline = CVPipeline()
+    result = pipeline.process_frame(frame)
+    return result
+
+
 if __name__ == "__main__":
     import ssl
     import uvicorn

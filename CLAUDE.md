@@ -10,6 +10,8 @@ HIPAA-compliant: encrypted storage, auth, audit logging, TLS.
 - **Web:** FastAPI + Uvicorn (port 3017, HTTPS)
 - **Frontend:** Vanilla HTML/JS + Tailwind CDN
 - **AI Providers:** Google Gemini (cloud), Qwen2.5-Omni (local/HIPAA-safe)
+- **CV Pipeline:** OpenCV DNN + MobileNet-SSD (CPU-only person detection)
+- **Tracking:** Centroid-based multi-object tracker (scipy)
 - **Encryption:** AES-256-GCM (cryptography library)
 - **Auth:** HMAC-signed tokens with PIN login
 - **TLS:** Self-signed cert (auto-generated)
@@ -36,11 +38,21 @@ providers/
   qwen.py              — Qwen2.5-Omni (local, HIPAA-safe)
 prompts/aba_system.py  — ABA observation prompt + schema
 configs/               — Client behavior target configs
+cv/
+  detector.py          — MobileNet-SSD person detection (CPU-only)
+  tracker.py           — Centroid-based multi-object tracking
+  zones.py             — Polygon ROI zone management
+  pipeline.py          — CV processing pipeline (ties detection+tracking)
+  models/              — Model files (not committed, ~23MB)
+ingest/
+  rtsp.py              — RTSP camera ingest with auto-reconnect
 security/
-  auth.py              — PIN auth + HMAC tokens + session timeout
+  auth.py              — PIN auth + HMAC tokens + session timeout + reset
   encryption.py        — AES-256-GCM encrypt/decrypt for PHI at rest
   audit.py             — Append-only JSONL audit logging
   tls.py               — Self-signed TLS cert generation
+docs/
+  SYSTEM_SPEC.md       — Full platform spec (10-phase roadmap)
 ```
 
 ## Security Layers (HIPAA)
