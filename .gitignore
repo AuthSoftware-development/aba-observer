@@ -20,4 +20,5 @@ audit_logs/
 .jwt_secret
 .users.json
 .face_consent/
+pos_data/
 **/models/*.t7

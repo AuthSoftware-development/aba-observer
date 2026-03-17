@@ -18,6 +18,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Camera snapshot endpoint (`GET /api/cameras/{id}/snapshot`) — get current frame as JPEG
 - Live CV detection endpoint (`GET /api/cameras/{id}/cv`) — run detection on latest camera frame
 - System spec (`docs/SYSTEM_SPEC.md`) and changelog
+- **Face Recognition (Phase 3):** Consent-based face detection + recognition with encrypted embeddings
+- Consent management API (create, list, get, revoke with secure embedding deletion)
+- Face enrollment from photos with encrypted embedding storage (AES-256-GCM)
+- Face recognition on video — identifies consented faces by name, anonymous labels for others
+- **Retail Domain (Phase 4):** Traffic counting, dwell time, occupancy, heatmaps
+- Retail video analysis endpoint with store-specific configuration
+- POS webhook integration for transaction recording (Square, Toast, Clover, generic)
+- Exception-based reporting (voids, no-sales, high refunds auto-flagged)
+- Conversion rate calculation (transactions / foot traffic)
+- Store configuration management (capacity, zones, operating hours)
+- Heatmap generation (20x20 grid of foot traffic density)
 
 ## [0.4.0] - 2026-03-14
 
