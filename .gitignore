@@ -19,3 +19,5 @@ audit_logs/
 .encryption_key
 .jwt_secret
 .users.json
+.face_consent/
+**/models/*.t7

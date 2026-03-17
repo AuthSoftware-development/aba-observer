@@ -7,6 +7,9 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+import cv2
+import numpy as np
+
 from fastapi import FastAPI, File, Form, Header, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -941,6 +944,249 @@ async def camera_cv_frame(camera_id: str, request: Request, authorization: str |
     pipeline = CVPipeline()
     result = pipeline.process_frame(frame)
     return result
+
+
+# ====== CONSENT & FACE RECOGNITION ROUTES ======
+
+@app.get("/api/consent")
+async def list_consent_records(
+    request: Request,
+    domain: str = "",
+    authorization: str | None = Header(None),
+):
+    """List all consent records."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+
+    from store.consent import list_consents
+    records = list_consents(domain=domain or None)
+    log_event("view_consent_list", user=user["sub"], role=user["role"], ip=_client_ip(request))
+    return records
+
+
+@app.post("/api/consent")
+async def create_consent_record(request: Request, authorization: str | None = Header(None)):
+    """Create a new consent record for face recognition enrollment."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+    if user["role"] not in ("admin", "bcba"):
+        return JSONResponse({"error": "Admin or BCBA only"}, status_code=403)
+
+    body = await request.json()
+    person_name = body.get("person_name", "").strip()
+    domain = body.get("domain", "").strip()
+    role = body.get("role", "").strip()
+    consent_source = body.get("consent_source", "").strip()
+
+    if not person_name or not domain or not role:
+        return JSONResponse({"error": "person_name, domain, and role required"}, status_code=400)
+    if domain not in ("aba", "retail", "security", "custom"):
+        return JSONResponse({"error": "domain must be aba, retail, security, or custom"}, status_code=400)
+
+    from store.consent import create_consent
+    record = create_consent(
+        person_name=person_name,
+        domain=domain,
+        role=role,
+        consent_source=consent_source or "admin_created",
+        cameras=body.get("cameras"),
+        expires_at=body.get("expires_at"),
+        guardian_name=body.get("guardian_name"),
+        notes=body.get("notes", ""),
+    )
+
+    log_event("create_consent", user=user["sub"], role=user["role"], ip=_client_ip(request),
+              details={"consent_id": record["consent_id"], "person": person_name, "domain": domain})
+    return record
+
+
+@app.get("/api/consent/{consent_id}")
+async def get_consent_record(consent_id: str, request: Request, authorization: str | None = Header(None)):
+    """Get a specific consent record."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+
+    from store.consent import get_consent
+    record = get_consent(consent_id)
+    if not record:
+        return JSONResponse({"error": "Consent not found"}, status_code=404)
+    return record
+
+
+@app.delete("/api/consent/{consent_id}")
+async def revoke_consent_record(consent_id: str, request: Request, authorization: str | None = Header(None)):
+    """Revoke consent and securely delete all face embeddings."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+    if user["role"] not in ("admin", "bcba"):
+        return JSONResponse({"error": "Admin or BCBA only"}, status_code=403)
+
+    from store.consent import revoke_consent
+    if not revoke_consent(consent_id):
+        return JSONResponse({"error": "Consent not found"}, status_code=404)
+
+    log_event("revoke_consent", user=user["sub"], role=user["role"], ip=_client_ip(request),
+              details={"consent_id": consent_id})
+    return {"revoked": consent_id}
+
+
+@app.post("/api/consent/{consent_id}/enroll")
+async def enroll_face(
+    consent_id: str,
+    request: Request,
+    photos: list[UploadFile] = File(...),
+    authorization: str | None = Header(None),
+):
+    """Enroll face embeddings from uploaded photos.
+
+    Upload 3-5 photos of the person from different angles for best accuracy.
+    Only works if a valid, non-revoked consent record exists.
+    """
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+    if user["role"] not in ("admin", "bcba"):
+        return JSONResponse({"error": "Admin or BCBA only"}, status_code=403)
+
+    from store.consent import get_consent, save_embeddings
+
+    record = get_consent(consent_id)
+    if not record:
+        return JSONResponse({"error": "Consent not found"}, status_code=404)
+    if record.get("revoked"):
+        return JSONResponse({"error": "Consent has been revoked"}, status_code=400)
+
+    try:
+        from cv.face import FaceRecognizer
+        recognizer = FaceRecognizer()
+
+        all_embeddings = []
+        for photo in photos:
+            contents = await photo.read()
+            nparr = np.frombuffer(contents, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img is None:
+                continue
+            embeddings = recognizer.enroll_from_frame(img)
+            all_embeddings.extend(embeddings)
+
+        if not all_embeddings:
+            return JSONResponse({"error": "No faces detected in uploaded photos"}, status_code=400)
+
+        save_embeddings(consent_id, all_embeddings)
+
+        log_event("enroll_face", user=user["sub"], role=user["role"], ip=_client_ip(request),
+                  details={"consent_id": consent_id, "person": record["person_name"],
+                           "photos": len(photos), "embeddings": len(all_embeddings)})
+
+        return {
+            "consent_id": consent_id,
+            "person_name": record["person_name"],
+            "embeddings_stored": len(all_embeddings),
+            "photos_processed": len(photos),
+        }
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/cv/recognize")
+async def recognize_faces_in_video(
+    request: Request,
+    video: UploadFile = File(...),
+    sample_fps: float = Form(1.0),
+    authorization: str | None = Header(None),
+):
+    """Run face recognition on an uploaded video.
+
+    Identifies consented/enrolled faces by name, labels others as "Person A/B/C".
+    """
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+
+    video_id = uuid.uuid4().hex[:8]
+    ext = Path(video.filename).suffix or ".mp4"
+    video_path = UPLOAD_DIR / f"face_{video_id}{ext}"
+
+    with open(video_path, "wb") as f:
+        shutil.copyfileobj(video.file, f)
+
+    try:
+        from cv.face import FaceRecognizer
+        from store.consent import load_all_enrolled
+
+        recognizer = FaceRecognizer()
+        enrolled = load_all_enrolled()
+        recognizer.load_enrolled(enrolled)
+
+        cap = cv2.VideoCapture(str(video_path))
+        if not cap.isOpened():
+            return JSONResponse({"error": "Cannot open video"}, status_code=400)
+
+        video_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        frame_interval = max(1, int(video_fps / sample_fps))
+
+        timeline = []
+        all_people = {}  # name → {role, identified, appearances}
+        frame_idx = 0
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            if frame_idx % frame_interval == 0:
+                timestamp = round(frame_idx / video_fps, 2)
+                faces = recognizer.recognize_frame(frame)
+
+                for face in faces:
+                    name = face["name"]
+                    if name not in all_people:
+                        all_people[name] = {
+                            "role": face["role"],
+                            "identified": face["identified"],
+                            "consent_id": face["consent_id"],
+                            "appearances": 0,
+                            "first_seen": timestamp,
+                            "last_seen": timestamp,
+                        }
+                    all_people[name]["appearances"] += 1
+                    all_people[name]["last_seen"] = timestamp
+
+                if faces:
+                    timeline.append({
+                        "timestamp": timestamp,
+                        "faces": [{
+                            "name": f["name"],
+                            "identified": f["identified"],
+                            "confidence": f["confidence"],
+                            "similarity": f["similarity"],
+                            "bbox": list(f["bbox"]),
+                        } for f in faces],
+                    })
+
+            frame_idx += 1
+
+        cap.release()
+
+        log_event("face_recognize", user=user["sub"], role=user["role"], ip=_client_ip(request),
+                  details={"video": video.filename, "people_found": len(all_people),
+                           "identified": sum(1 for p in all_people.values() if p["identified"])})
+
+        return {
+            "people": all_people,
+            "enrolled_count": len(enrolled),
+            "timeline": timeline,
+            "frames_analyzed": len(timeline),
+        }
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+    finally:
+        secure_delete(video_path)
 
 
 if __name__ == "__main__":

@@ -8,15 +8,28 @@ from pathlib import Path
 MODELS_DIR = Path(__file__).parent
 
 MODELS = {
+    # Person detection
     "MobileNetSSD_deploy.prototxt": {
         "url": "https://github.com/djmv/MobilNet_SSD_opencv/raw/master/MobileNetSSD_deploy.prototxt",
         "size_mb": 0.03,
-        "sha256": None,  # Skip hash check for prototxt
     },
     "MobileNetSSD_deploy.caffemodel": {
         "url": "https://github.com/djmv/MobilNet_SSD_opencv/raw/master/MobileNetSSD_deploy.caffemodel",
         "size_mb": 23.1,
-        "sha256": None,  # Skip hash check — multiple valid versions exist
+    },
+    # Face detection (res10 SSD)
+    "face_detector.prototxt": {
+        "url": "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt",
+        "size_mb": 0.03,
+    },
+    "face_detector.caffemodel": {
+        "url": "https://github.com/opencv/opencv_3rdparty/raw/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel",
+        "size_mb": 10.7,
+    },
+    # Face embeddings (OpenFace)
+    "openface.nn4.small2.v1.t7": {
+        "url": "https://storage.cmusatyalab.org/openface-models/nn4.small2.v1.t7",
+        "size_mb": 31.5,
     },
 }
 
