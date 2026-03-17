@@ -3,6 +3,7 @@
 import json
 import os
 import shutil
+import time
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -1858,6 +1859,110 @@ async def search_face_by_consent(
     log_event("face_search_consent", user=user["sub"], role=user["role"], ip=_client_ip(request),
               details={"consent_id": consent_id, "appearances": results.get("total_appearances", 0)})
     return results
+
+
+# ====== PLATFORM ROUTES ======
+
+@app.get("/api/system/status")
+async def system_status(request: Request, authorization: str | None = Header(None)):
+    """System health: cameras, resources, search index, domain status."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+
+    import platform
+
+    cameras = _get_camera_manager().list_cameras()
+    from search.engine import get_event_stats
+    search_stats = get_event_stats()
+
+    # Resource usage
+    try:
+        import psutil
+        cpu = psutil.cpu_percent(interval=0.1)
+        mem = psutil.virtual_memory()
+        disk = psutil.disk_usage(str(Path(__file__).parent))
+        resources = {
+            "cpu_percent": cpu,
+            "memory_used_gb": round(mem.used / (1024**3), 1),
+            "memory_total_gb": round(mem.total / (1024**3), 1),
+            "disk_used_gb": round(disk.used / (1024**3), 1),
+            "disk_total_gb": round(disk.total / (1024**3), 1),
+        }
+    except ImportError:
+        resources = {"note": "Install psutil for resource monitoring"}
+
+    return {
+        "platform": "The I — Intelligent Video Analytics",
+        "version": "0.5.0",
+        "python": platform.python_version(),
+        "os": f"{platform.system()} {platform.release()}",
+        "cameras": {
+            "total": len(cameras),
+            "connected": sum(1 for c in cameras if c.get("connected")),
+            "list": cameras,
+        },
+        "search_index": search_stats,
+        "resources": resources,
+        "domains": {
+            "aba": {"status": "active", "endpoints": 5},
+            "retail": {"status": "active", "endpoints": 6},
+            "security": {"status": "active", "endpoints": 7},
+        },
+        "storage": {
+            "encrypted_results": len(list(OUTPUT_DIR.glob("*.enc"))),
+            "upload_files": len(list(UPLOAD_DIR.glob("*"))),
+        },
+    }
+
+
+@app.get("/api/cameras/discover")
+async def discover_cameras_endpoint(request: Request, authorization: str | None = Header(None)):
+    """Auto-discover ONVIF cameras on the local network."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+    if user["role"] != "admin":
+        return JSONResponse({"error": "Admin only"}, status_code=403)
+
+    from ingest.onvif_discovery import discover_cameras
+    cameras = discover_cameras(timeout=5.0)
+
+    log_event("camera_discovery", user=user["sub"], role=user["role"], ip=_client_ip(request),
+              details={"found": len(cameras)})
+    return {"discovered": cameras, "count": len(cameras)}
+
+
+@app.post("/api/notifications/test")
+async def test_notification(request: Request, authorization: str | None = Header(None)):
+    """Send a test notification through configured channels."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+    if user["role"] != "admin":
+        return JSONResponse({"error": "Admin only"}, status_code=403)
+
+    body = await request.json()
+    channel = body.get("channel", "log")
+
+    from notifications.engine import NotificationEngine
+    engine = NotificationEngine(config=body.get("config", {}))
+
+    test_alert = {
+        "rule_id": "test",
+        "rule_name": "Test Notification",
+        "event": {
+            "type": "test",
+            "severity": "low",
+            "description": "This is a test notification from The I",
+            "timestamp": time.time(),
+        },
+        "notify": [channel],
+        "webhook_url": body.get("webhook_url"),
+    }
+
+    results = engine.deliver(test_alert)
+    return {"channel": channel, "delivered": results}
 
 
 if __name__ == "__main__":

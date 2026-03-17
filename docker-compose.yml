@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  the-i:
+    build: .
+    container_name: the-i
+    ports:
+      - "3017:3017"
+    volumes:
+      - ./configs:/app/configs
+      - ./output:/app/output
+      - the-i-data:/app/data
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - TLS_ENABLED=${TLS_ENABLED:-true}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3017/api/auth/status')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  the-i-data:
+    driver: local
