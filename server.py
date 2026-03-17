@@ -1965,6 +1965,130 @@ async def test_notification(request: Request, authorization: str | None = Header
     return {"channel": channel, "delivered": results}
 
 
+# ====== API KEY MANAGEMENT ======
+
+@app.post("/api/api-keys")
+async def create_api_key_endpoint(request: Request, authorization: str | None = Header(None)):
+    """Create a new API key for third-party integrations."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+    if user["role"] != "admin":
+        return JSONResponse({"error": "Admin only"}, status_code=403)
+
+    body = await request.json()
+    name = body.get("name", "").strip()
+    if not name:
+        return JSONResponse({"error": "Name required"}, status_code=400)
+
+    from security.api_keys import create_api_key
+    result = create_api_key(
+        name=name,
+        created_by=user["sub"],
+        scopes=body.get("scopes"),
+        expires_at=body.get("expires_at"),
+    )
+
+    log_event("create_api_key", user=user["sub"], role=user["role"], ip=_client_ip(request),
+              details={"key_id": result["key_id"], "name": name, "scopes": body.get("scopes")})
+    return result
+
+
+@app.get("/api/api-keys")
+async def list_api_keys_endpoint(request: Request, authorization: str | None = Header(None)):
+    """List all API keys (secrets not shown)."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+    if user["role"] != "admin":
+        return JSONResponse({"error": "Admin only"}, status_code=403)
+
+    from security.api_keys import list_api_keys
+    return list_api_keys()
+
+
+@app.delete("/api/api-keys/{key_id}")
+async def revoke_api_key_endpoint(key_id: str, request: Request, authorization: str | None = Header(None)):
+    """Revoke an API key."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+    if user["role"] != "admin":
+        return JSONResponse({"error": "Admin only"}, status_code=403)
+
+    from security.api_keys import revoke_api_key
+    if not revoke_api_key(key_id):
+        return JSONResponse({"error": "Key not found"}, status_code=404)
+
+    log_event("revoke_api_key", user=user["sub"], role=user["role"], ip=_client_ip(request),
+              details={"key_id": key_id})
+    return {"revoked": key_id}
+
+
+# ====== COMPLIANCE MANAGEMENT ======
+
+@app.get("/api/compliance")
+async def get_compliance(request: Request, authorization: str | None = Header(None)):
+    """Get current compliance configuration."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+
+    from security.compliance import get_compliance_config
+    return get_compliance_config()
+
+
+@app.put("/api/compliance/{mode}")
+async def update_compliance(mode: str, request: Request, authorization: str | None = Header(None)):
+    """Enable/disable a compliance mode.
+
+    Body: {"enabled": true, "settings": {...}}
+    """
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+    if user["role"] != "admin":
+        return JSONResponse({"error": "Admin only"}, status_code=403)
+
+    body = await request.json()
+    from security.compliance import update_compliance_config
+    result = update_compliance_config(
+        mode=mode,
+        enabled=body.get("enabled", False),
+        settings=body.get("settings"),
+    )
+
+    if "error" in result:
+        return JSONResponse(result, status_code=400)
+
+    log_event("update_compliance", user=user["sub"], role=user["role"], ip=_client_ip(request),
+              details={"mode": mode, "enabled": body.get("enabled")})
+    return result
+
+
+@app.post("/api/compliance/check")
+async def check_compliance_endpoint(request: Request, authorization: str | None = Header(None)):
+    """Check if an action is allowed under current compliance settings.
+
+    Body: {"action": "face_recognition", "context": {"state": "IL"}}
+    """
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+
+    body = await request.json()
+    from security.compliance import check_compliance
+    return check_compliance(
+        action=body.get("action", ""),
+        context=body.get("context"),
+    )
+
+
+# ====== OPENAPI DOCS ======
+# FastAPI auto-generates OpenAPI docs at /docs (Swagger UI) and /redoc (ReDoc)
+# These are available without auth for developer reference
+
+
 if __name__ == "__main__":
     import ssl
     import uvicorn

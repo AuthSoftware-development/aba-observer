@@ -19,6 +19,7 @@ audit_logs/
 .encryption_key
 .jwt_secret
 .users.json
+.api_keys.json
 .face_consent/
 pos_data/
 alerts/
