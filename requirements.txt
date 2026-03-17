@@ -10,3 +10,5 @@ soundfile
 librosa
 opencv-python>=4.8.0
 scipy>=1.11.0
+mediapipe>=0.10.0
+reportlab>=4.0.0
