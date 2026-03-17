@@ -40,7 +40,13 @@ def _check_qwen_status() -> dict:
 
 _QWEN_STATUS = _check_qwen_status()
 
-app = FastAPI(title="ABA Observer", version="0.4.0")
+# Auto-download CV models on startup
+from cv.models.download import check_models, download_models
+if not check_models():
+    print("[startup] Downloading CV model files...")
+    download_models()
+
+app = FastAPI(title="ABA Observer", version="0.5.0")
 
 BEHAVIOR_LIBRARY_PATH = Path(__file__).parent / "configs" / "behavior_library.json"
 

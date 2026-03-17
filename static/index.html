@@ -92,6 +92,7 @@
       <div class="max-w-6xl mx-auto px-4 sm:px-6 flex gap-6">
         <button class="tab-btn tab-active py-3 text-sm font-medium" data-tab="upload">Upload</button>
         <button class="tab-btn py-3 text-sm font-medium text-slate-500 dark:text-slate-400" data-tab="camera">Live Camera</button>
+        <button class="tab-btn py-3 text-sm font-medium text-slate-500 dark:text-slate-400" data-tab="cv">CV Analytics</button>
         <button class="tab-btn py-3 text-sm font-medium text-slate-500 dark:text-slate-400" data-tab="data">Collected Data</button>
         <button class="tab-btn py-3 text-sm font-medium text-slate-500 dark:text-slate-400" data-tab="audit" id="audit-tab-btn">Audit Log</button>
       </div>
@@ -184,6 +185,81 @@
       </div>
 
       <!-- ==================== DATA TAB ==================== -->
+      <!-- ==================== CV ANALYTICS TAB ==================== -->
+      <div id="tab-cv" class="tab-panel hidden fade-in">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Upload for CV -->
+          <div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+            <h2 class="text-base font-semibold mb-1">Person Detection & Tracking</h2>
+            <p class="text-xs text-slate-400 mb-4">Upload a video to detect and track people using on-device CV (no cloud). CPU-only, runs locally.</p>
+            <div id="cv-drop-zone" class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition-colors">
+              <svg class="w-8 h-8 mx-auto text-slate-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              <p class="text-sm text-slate-600 dark:text-slate-300 font-medium">Drop video for CV analysis</p>
+              <p class="text-xs text-slate-400 mt-1">Person detection + tracking (no AI model needed)</p>
+              <input type="file" id="cv-file-input" accept="video/*" class="hidden">
+            </div>
+            <div id="cv-file-info" class="hidden mt-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-lg flex items-center justify-between">
+              <div class="flex items-center gap-2"><span id="cv-file-name" class="text-sm font-medium"></span><span id="cv-file-size" class="text-xs text-slate-400"></span></div>
+              <button id="cv-clear-file" class="text-xs text-red-400 hover:text-red-600">Remove</button>
+            </div>
+            <div class="mt-4 flex items-center gap-4">
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-slate-500">Confidence:</label>
+                <select id="cv-confidence" class="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-2 py-1 text-xs">
+                  <option value="0.3">Low (0.3)</option>
+                  <option value="0.4">Medium (0.4)</option>
+                  <option value="0.5" selected>Default (0.5)</option>
+                  <option value="0.7">High (0.7)</option>
+                </select>
+              </div>
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-slate-500">Sample FPS:</label>
+                <select id="cv-fps" class="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-2 py-1 text-xs">
+                  <option value="1">1 fps (fast)</option>
+                  <option value="2" selected>2 fps</option>
+                  <option value="5">5 fps</option>
+                  <option value="10">10 fps (detailed)</option>
+                </select>
+              </div>
+              <button id="cv-analyze-btn" disabled class="ml-auto bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Analyze</button>
+            </div>
+            <div id="cv-loading" class="hidden mt-4 p-6 text-center">
+              <div class="spinner mx-auto mb-3"></div>
+              <p class="text-sm font-medium">Running person detection...</p>
+              <p class="text-xs text-slate-400 mt-1">Processing locally on CPU — no data leaves this device</p>
+            </div>
+          </div>
+          <!-- CV Settings / Camera List -->
+          <div class="space-y-4">
+            <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+              <h3 class="text-sm font-semibold mb-3">Connected Cameras</h3>
+              <div id="camera-list" class="space-y-2 text-xs"><p class="text-slate-400">No cameras connected</p></div>
+              <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                <p class="text-xs font-medium mb-2">Add RTSP Camera</p>
+                <input id="cam-id-input" type="text" class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-2 py-1.5 text-xs mb-2" placeholder="Camera ID (e.g., lobby-1)">
+                <input id="cam-name-input" type="text" class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-2 py-1.5 text-xs mb-2" placeholder="Name (e.g., Lobby Camera)">
+                <input id="cam-url-input" type="text" class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-2 py-1.5 text-xs mb-2" placeholder="rtsp://user:pass@ip:554/stream">
+                <button id="add-camera-btn" class="w-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded px-3 py-1.5 text-xs font-medium hover:bg-slate-200 dark:hover:bg-slate-600">Add Camera</button>
+              </div>
+            </div>
+            <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+              <p class="text-xs text-green-700 dark:text-green-400"><strong>Privacy:</strong> All CV processing runs locally on this device. No video data is sent to any cloud service.</p>
+            </div>
+          </div>
+        </div>
+        <!-- CV Results -->
+        <div id="cv-results" class="hidden mt-6 space-y-4">
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-base font-semibold">Detection Results</h3>
+              <button id="cv-download-btn" class="text-xs border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700">Download JSON</button>
+            </div>
+            <div id="cv-summary" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4"></div>
+            <div id="cv-timeline-chart" class="h-32 bg-slate-50 dark:bg-slate-700 rounded-lg p-3 relative overflow-hidden"></div>
+          </div>
+        </div>
+      </div>
+
       <div id="tab-data" class="tab-panel hidden fade-in">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold">Collected Data</h2>
@@ -415,6 +491,7 @@ function switchTab(tab) {
   ['loading-section','results-section','error-section'].forEach(id => document.getElementById(id).classList.add('hidden'));
   if (tab==='data') loadHistory();
   if (tab==='camera') enumerateCameras();
+  if (tab==='cv') loadCameras();
   if (tab==='audit') loadAuditLog();
 }
 
@@ -572,6 +649,93 @@ function renderResults(data){
   const ev=r.events||[], tEl=document.getElementById('event-timeline');
   if(!ev.length){tEl.innerHTML='<p class="text-sm text-slate-400">No events</p>'}else{const tc={antecedent:'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',behavior:'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',consequence:'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',intervention:'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400',other:'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'};tEl.innerHTML=`<table class="w-full text-xs"><thead class="text-left text-slate-500 uppercase tracking-wide border-b border-slate-200 dark:border-slate-700"><tr><th class="py-2 pr-2 w-16">Time</th><th class="py-2 pr-2 w-24">Type</th><th class="py-2 pr-2 w-28">Category</th><th class="py-2">Description</th></tr></thead><tbody>${ev.map(e=>`<tr class="border-b border-slate-100 dark:border-slate-700/50"><td class="py-2 pr-2 font-mono text-slate-500">${e.timestamp||''}</td><td class="py-2 pr-2"><span class="px-1.5 py-0.5 rounded ${tc[e.event_type]||tc.other}">${e.event_type||''}</span></td><td class="py-2 pr-2 capitalize">${(e.category||'').replace(/_/g,' ')}</td><td class="py-2">${e.description||''}</td></tr>`).join('')}</tbody></table>`}
 }
+
+// ====== CV ANALYTICS ======
+let cvFile=null, cvResults=null;
+const cvDrop=document.getElementById('cv-drop-zone'), cvInput=document.getElementById('cv-file-input');
+cvDrop.addEventListener('click', ()=>cvInput.click());
+cvDrop.addEventListener('dragover', e=>{e.preventDefault();cvDrop.classList.add('dragover')});
+cvDrop.addEventListener('dragleave', ()=>cvDrop.classList.remove('dragover'));
+cvDrop.addEventListener('drop', e=>{e.preventDefault();cvDrop.classList.remove('dragover');if(e.dataTransfer.files.length)setCvFile(e.dataTransfer.files[0])});
+cvInput.addEventListener('change', ()=>{if(cvInput.files.length)setCvFile(cvInput.files[0])});
+document.getElementById('cv-clear-file').addEventListener('click', ()=>{cvFile=null;cvInput.value='';document.getElementById('cv-file-info').classList.add('hidden');document.getElementById('cv-analyze-btn').disabled=true});
+
+function setCvFile(f){cvFile=f;document.getElementById('cv-file-name').textContent=f.name;document.getElementById('cv-file-size').textContent=`(${(f.size/1024/1024).toFixed(1)} MB)`;document.getElementById('cv-file-info').classList.remove('hidden');document.getElementById('cv-analyze-btn').disabled=false}
+
+document.getElementById('cv-analyze-btn').addEventListener('click', async()=>{
+  if(!cvFile)return;
+  document.getElementById('cv-loading').classList.remove('hidden');
+  document.getElementById('cv-results').classList.add('hidden');
+  document.getElementById('cv-analyze-btn').disabled=true;
+  const fd=new FormData();fd.append('video',cvFile);fd.append('confidence',document.getElementById('cv-confidence').value);fd.append('sample_fps',document.getElementById('cv-fps').value);
+  try{
+    const res=await fetch('/api/cv/analyze',{method:'POST',body:fd,headers:authHeaders()});
+    if(!res.ok)throw new Error((await res.json()).error||'CV analysis failed');
+    cvResults=await res.json();renderCvResults(cvResults);
+  }catch(e){alert('CV Error: '+e.message)}
+  finally{document.getElementById('cv-loading').classList.add('hidden');document.getElementById('cv-analyze-btn').disabled=false}
+});
+
+function renderCvResults(data){
+  const s=data.summary, v=data.video_info;
+  document.getElementById('cv-summary').innerHTML=[
+    {l:'Unique People',v:s.total_unique_people,c:'text-blue-600 dark:text-blue-400'},
+    {l:'Max Concurrent',v:s.max_concurrent_people,c:'text-amber-600 dark:text-amber-400'},
+    {l:'Avg Per Frame',v:s.avg_people_per_frame,c:'text-green-600 dark:text-green-400'},
+    {l:'Frames Analyzed',v:v.frames_analyzed,c:'text-slate-600 dark:text-slate-400'},
+  ].map(i=>`<div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3"><p class="text-xs text-slate-500 uppercase tracking-wide">${i.l}</p><p class="text-xl font-bold mt-1 ${i.c}">${i.v}</p></div>`).join('');
+
+  // Timeline chart (simple bar chart)
+  const tl=data.timeline, maxP=Math.max(...tl.map(t=>t.person_count),1);
+  const barW=Math.max(1,Math.floor(100/tl.length*3));
+  document.getElementById('cv-timeline-chart').innerHTML=`
+    <div class="flex items-end h-full gap-px">
+      ${tl.map(t=>{
+        const h=t.person_count>0?Math.max(8,(t.person_count/maxP)*100):0;
+        return `<div class="flex-1 bg-blue-500/70 rounded-t-sm transition-all" style="height:${h}%" title="t=${t.timestamp}s: ${t.person_count} people"></div>`;
+      }).join('')}
+    </div>
+    <div class="flex justify-between text-[10px] text-slate-400 mt-1">
+      <span>0s</span><span>${v.duration_seconds}s</span>
+    </div>
+    <p class="text-[10px] text-slate-400 text-center mt-0.5">Person count over time (${v.duration_seconds}s video, ${v.fps} fps source)</p>
+  `;
+  document.getElementById('cv-results').classList.remove('hidden');
+}
+
+document.getElementById('cv-download-btn').addEventListener('click', ()=>{if(!cvResults)return;const b=new Blob([JSON.stringify(cvResults,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`cv_analysis_${new Date().toISOString().slice(0,10)}.json`;a.click()});
+
+// Camera management
+async function loadCameras(){
+  try{
+    const cams=await(await authedFetch('/api/cameras')).json();
+    const el=document.getElementById('camera-list');
+    if(!cams.length){el.innerHTML='<p class="text-slate-400">No cameras connected</p>';return}
+    el.innerHTML=cams.map(c=>`
+      <div class="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-700 rounded-lg">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full ${c.connected?'bg-green-500':'bg-red-400'}"></span>
+          <span class="font-medium">${c.name}</span>
+          ${c.connected?`<span class="text-slate-400">${c.fps} fps</span>`:'<span class="text-red-400">disconnected</span>'}
+        </div>
+        <button class="remove-cam text-red-400 hover:text-red-600" data-id="${c.camera_id}">&times;</button>
+      </div>
+    `).join('');
+    el.querySelectorAll('.remove-cam').forEach(b=>b.addEventListener('click',async()=>{await authedFetch(`/api/cameras/${b.dataset.id}`,{method:'DELETE'});loadCameras()}));
+  }catch(e){}
+}
+
+document.getElementById('add-camera-btn').addEventListener('click', async()=>{
+  const id=document.getElementById('cam-id-input').value.trim();
+  const name=document.getElementById('cam-name-input').value.trim();
+  const url=document.getElementById('cam-url-input').value.trim();
+  if(!id||!url){alert('Camera ID and RTSP URL required');return}
+  try{
+    await authedFetch('/api/cameras',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({camera_id:id,name:name||id,rtsp_url:url})});
+    document.getElementById('cam-id-input').value='';document.getElementById('cam-name-input').value='';document.getElementById('cam-url-input').value='';
+    loadCameras();
+  }catch(e){alert('Error: '+e.message)}
+});
 
 // ====== INIT ======
 checkAuth();
