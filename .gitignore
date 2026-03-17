@@ -21,4 +21,6 @@ audit_logs/
 .users.json
 .face_consent/
 pos_data/
+alerts/
+access_events/
 **/models/*.t7
