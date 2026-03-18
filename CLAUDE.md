@@ -22,12 +22,19 @@ HIPAA-compliant: encrypted storage, auth, audit logging, TLS.
 # Install dependencies
 pip install -r requirements.txt
 
-# Start server (HTTPS on port 3017)
+# Start backend (HTTPS on port 3017)
 GOOGLE_API_KEY=<key> python server.py
+
+# Start frontend (port 3018)
+cd frontend && npm run dev
 
 # CLI usage (no auth required)
 python main.py analyze --video session.mp4
 ```
+
+## Ports
+- **3017** — FastAPI backend (HTTPS)
+- **3018** — Next.js frontend
 
 ## Architecture
 ```
