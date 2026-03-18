@@ -10,11 +10,17 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from dotenv import load_dotenv
+
+load_dotenv()  # Load .env file
 
 from fastapi import FastAPI, File, Form, Header, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from security.audit import log_event
 from security.auth import (
@@ -51,6 +57,14 @@ if not check_models():
     download_models()
 
 app = FastAPI(title="The I — Intelligent Video Analytics", version="0.5.0")
+
+# Rate limiting
+limiter = Limiter(key_func=get_remote_address, enabled=os.environ.get("RATE_LIMIT_ENABLED", "true").lower() != "false")
+app.state.limiter = limiter
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse({"error": "Rate limit exceeded. Try again later."}, status_code=429)
 
 BEHAVIOR_LIBRARY_PATH = Path(__file__).parent / "configs" / "behavior_library.json"
 
@@ -130,6 +144,7 @@ async def auth_status():
 
 
 @app.post("/api/auth/setup")
+@limiter.limit("5/minute")
 async def auth_setup(request: Request):
     """First-time setup: create admin user."""
     if not setup_required():
@@ -147,6 +162,7 @@ async def auth_setup(request: Request):
 
 
 @app.post("/api/auth/login")
+@limiter.limit("10/minute")
 async def auth_login(request: Request):
     """Login with username + PIN."""
     body = await request.json()
