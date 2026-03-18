@@ -94,7 +94,10 @@
         <button class="tab-btn py-3 text-sm font-medium text-slate-500 dark:text-slate-400" data-tab="camera">Live Camera</button>
         <button class="tab-btn py-3 text-sm font-medium text-slate-500 dark:text-slate-400" data-tab="cv">CV Analytics</button>
         <button class="tab-btn py-3 text-sm font-medium text-slate-500 dark:text-slate-400" data-tab="data">Collected Data</button>
-        <button class="tab-btn py-3 text-sm font-medium text-slate-500 dark:text-slate-400" data-tab="audit" id="audit-tab-btn">Audit Log</button>
+        <button class="tab-btn py-3 text-sm font-medium text-slate-500 dark:text-slate-400" data-tab="consent">Consent</button>
+        <button class="tab-btn py-3 text-sm font-medium text-slate-500 dark:text-slate-400" data-tab="search">Search</button>
+        <button class="tab-btn py-3 text-sm font-medium text-slate-500 dark:text-slate-400" data-tab="settings">Settings</button>
+        <button class="tab-btn py-3 text-sm font-medium text-slate-500 dark:text-slate-400" data-tab="audit" id="audit-tab-btn">Audit</button>
       </div>
     </nav>
 
@@ -276,6 +279,89 @@
         </div>
         <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div id="audit-log" class="max-h-[500px] overflow-y-auto"></div>
+        </div>
+      </div>
+
+      <!-- ==================== CONSENT TAB ==================== -->
+      <div id="tab-consent" class="tab-panel hidden fade-in">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold">Consent Records</h2>
+              <button id="refresh-consent" class="text-xs border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700">Refresh</button>
+            </div>
+            <div id="consent-list" class="space-y-3"><p class="text-sm text-slate-400">Loading...</p></div>
+          </div>
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+            <h3 class="text-sm font-semibold mb-3">New Consent Record</h3>
+            <input id="consent-name" type="text" class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-2 py-1.5 text-xs mb-2" placeholder="Person name">
+            <select id="consent-domain" class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-2 py-1.5 text-xs mb-2">
+              <option value="aba">ABA Therapy</option>
+              <option value="retail">Retail</option>
+              <option value="security">Security</option>
+            </select>
+            <select id="consent-role" class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-2 py-1.5 text-xs mb-2">
+              <option value="client">Client</option>
+              <option value="therapist">Therapist</option>
+              <option value="employee">Employee</option>
+            </select>
+            <input id="consent-source" type="text" class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-2 py-1.5 text-xs mb-2" placeholder="Consent source (e.g., signed form)">
+            <input id="consent-guardian" type="text" class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-2 py-1.5 text-xs mb-2" placeholder="Guardian name (if minor)">
+            <button id="create-consent-btn" class="w-full bg-blue-600 text-white rounded px-3 py-1.5 text-xs font-medium hover:bg-blue-500">Create Consent</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== SEARCH TAB ==================== -->
+      <div id="tab-search" class="tab-panel hidden fade-in">
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 mb-4">
+          <h2 class="text-base font-semibold mb-3">Search Events</h2>
+          <div class="flex gap-3">
+            <input id="search-input" type="text" class="flex-1 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm" placeholder='Natural language search (e.g., "show me all falls", "find loitering")'>
+            <select id="search-domain" class="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm">
+              <option value="">All domains</option>
+              <option value="aba">ABA</option>
+              <option value="retail">Retail</option>
+              <option value="security">Security</option>
+            </select>
+            <button id="search-btn" class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-500">Search</button>
+          </div>
+        </div>
+        <div id="search-results" class="space-y-2"></div>
+        <div id="search-stats" class="mt-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+          <h3 class="text-sm font-semibold mb-2">Index Stats</h3>
+          <div id="search-stats-content" class="text-xs text-slate-400">Loading...</div>
+        </div>
+      </div>
+
+      <!-- ==================== SETTINGS TAB ==================== -->
+      <div id="tab-settings" class="tab-panel hidden fade-in">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- User Management -->
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+            <h2 class="text-base font-semibold mb-4">User Management</h2>
+            <div class="space-y-3 mb-4">
+              <input id="new-username" type="text" class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-3 py-2 text-sm" placeholder="Username">
+              <input id="new-pin" type="password" class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-3 py-2 text-sm" placeholder="PIN (4+ characters)">
+              <select id="new-role" class="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-3 py-2 text-sm">
+                <option value="rbt">RBT</option>
+                <option value="bcba">BCBA</option>
+                <option value="admin">Admin</option>
+              </select>
+              <button id="create-user-btn" class="w-full bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-500">Create User</button>
+            </div>
+            <div id="create-user-status" class="text-xs hidden"></div>
+          </div>
+          <!-- Compliance -->
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+            <h2 class="text-base font-semibold mb-4">Compliance Modes</h2>
+            <div id="compliance-list" class="space-y-3"><p class="text-sm text-slate-400">Loading...</p></div>
+          </div>
+          <!-- System Status -->
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 lg:col-span-2">
+            <h2 class="text-base font-semibold mb-4">System Status</h2>
+            <div id="system-status" class="text-sm text-slate-400">Loading...</div>
+          </div>
         </div>
       </div>
 
@@ -492,6 +578,9 @@ function switchTab(tab) {
   if (tab==='data') loadHistory();
   if (tab==='camera') enumerateCameras();
   if (tab==='cv') loadCameras();
+  if (tab==='consent') loadConsents();
+  if (tab==='search') loadSearchStats();
+  if (tab==='settings') { loadCompliance(); loadSystemStatus(); }
   if (tab==='audit') loadAuditLog();
 }
 
@@ -735,6 +824,146 @@ document.getElementById('add-camera-btn').addEventListener('click', async()=>{
     document.getElementById('cam-id-input').value='';document.getElementById('cam-name-input').value='';document.getElementById('cam-url-input').value='';
     loadCameras();
   }catch(e){alert('Error: '+e.message)}
+});
+
+// ====== CONSENT MANAGEMENT ======
+async function loadConsents(){
+  const el=document.getElementById('consent-list');
+  try{
+    const consents=await(await authedFetch('/api/consent')).json();
+    if(!consents.length){el.innerHTML='<div class="text-center py-6 text-slate-400"><p>No consent records yet.</p></div>';return}
+    el.innerHTML=consents.map(c=>`
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium">${c.person_name}</p>
+          <p class="text-xs text-slate-400">${c.domain}/${c.role} &middot; ${c.consent_source||'N/A'} &middot; enrolled: ${c.enrolled?'Yes ('+c.embedding_count+' embeddings)':'No'}${c.guardian_name?' &middot; guardian: '+c.guardian_name:''}</p>
+        </div>
+        <div class="flex gap-2">
+          ${!c.enrolled?`<label class="text-xs text-blue-600 font-medium cursor-pointer">Enroll <input type="file" accept="image/*" multiple class="hidden enroll-input" data-id="${c.consent_id}"></label>`:'<span class="text-xs text-green-500">Enrolled</span>'}
+          <button class="revoke-consent text-xs text-red-400 hover:text-red-600" data-id="${c.consent_id}">Revoke</button>
+        </div>
+      </div>
+    `).join('');
+    el.querySelectorAll('.revoke-consent').forEach(b=>b.addEventListener('click',async()=>{
+      if(!confirm('Revoke consent and delete all face embeddings?'))return;
+      await authedFetch(`/api/consent/${b.dataset.id}`,{method:'DELETE'});loadConsents();
+    }));
+    el.querySelectorAll('.enroll-input').forEach(input=>input.addEventListener('change',async()=>{
+      if(!input.files.length)return;
+      const fd=new FormData();
+      for(const f of input.files)fd.append('photos',f);
+      try{const r=await(await fetch(`/api/consent/${input.dataset.id}/enroll`,{method:'POST',body:fd,headers:authHeaders()})).json();
+        alert(`Enrolled ${r.embeddings_stored} face embeddings from ${r.photos_processed} photos`);loadConsents();
+      }catch(e){alert('Enrollment failed: '+e.message)}
+    }));
+  }catch(e){el.innerHTML=`<p class="text-red-500 text-sm">${e.message}</p>`}
+}
+document.getElementById('refresh-consent').addEventListener('click', loadConsents);
+document.getElementById('create-consent-btn').addEventListener('click', async()=>{
+  const name=document.getElementById('consent-name').value.trim();
+  if(!name){alert('Person name required');return}
+  try{
+    await authedFetch('/api/consent',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},
+      body:JSON.stringify({person_name:name,domain:document.getElementById('consent-domain').value,
+        role:document.getElementById('consent-role').value,consent_source:document.getElementById('consent-source').value,
+        guardian_name:document.getElementById('consent-guardian').value||undefined})});
+    document.getElementById('consent-name').value='';document.getElementById('consent-source').value='';document.getElementById('consent-guardian').value='';
+    loadConsents();
+  }catch(e){alert('Error: '+e.message)}
+});
+
+// ====== SEARCH ======
+document.getElementById('search-btn').addEventListener('click', async()=>{
+  const query=document.getElementById('search-input').value.trim();
+  if(!query){alert('Enter a search query');return}
+  const el=document.getElementById('search-results');
+  try{
+    const r=await(await authedFetch('/api/search/natural',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},
+      body:JSON.stringify({query,domain:document.getElementById('search-domain').value})})).json();
+    if(!r.results.length){el.innerHTML='<p class="text-sm text-slate-400">No results found.</p>';return}
+    el.innerHTML=`<p class="text-xs text-slate-500 mb-2">${r.total} results (parsed: type=${r.parsed.event_type||'any'}, domain=${r.parsed.domain||'all'})</p>`+
+      r.results.map(e=>`<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+        <div class="flex justify-between"><span class="text-xs font-medium ${e.severity==='high'?'text-red-500':e.severity==='medium'?'text-amber-500':'text-slate-500'}">${e.event_type||''}</span>
+        <span class="text-xs text-slate-400">${e.domain||''}</span></div>
+        <p class="text-sm mt-1">${e.description||''}</p>
+        <p class="text-xs text-slate-400 mt-1">${e.person_name?'Person: '+e.person_name+' &middot; ':''}${e.severity?'Severity: '+e.severity:''}</p>
+      </div>`).join('');
+  }catch(e){el.innerHTML=`<p class="text-red-500 text-sm">${e.message}</p>`}
+});
+document.getElementById('search-input').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('search-btn').click()});
+
+async function loadSearchStats(){
+  try{const s=await(await authedFetch('/api/search/stats')).json();
+    document.getElementById('search-stats-content').innerHTML=`Total events: ${s.total_events}<br>By domain: ${Object.entries(s.by_domain).map(([k,v])=>`${k}: ${v}`).join(', ')||'none'}<br>By type: ${Object.entries(s.by_type).map(([k,v])=>`${k}: ${v}`).join(', ')||'none'}`;
+  }catch(e){}
+}
+
+// ====== SETTINGS ======
+document.getElementById('create-user-btn').addEventListener('click', async()=>{
+  const username=document.getElementById('new-username').value.trim();
+  const pin=document.getElementById('new-pin').value.trim();
+  const role=document.getElementById('new-role').value;
+  if(!username||pin.length<4){alert('Username required, PIN must be 4+ characters');return}
+  const el=document.getElementById('create-user-status');
+  try{
+    const r=await(await authedFetch('/api/auth/create-user',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},
+      body:JSON.stringify({username,pin,role})})).json();
+    if(r.error){el.className='text-xs text-red-500';el.textContent=r.error;}
+    else{el.className='text-xs text-green-500';el.textContent=`Created ${r.created} (${r.role})`;
+      document.getElementById('new-username').value='';document.getElementById('new-pin').value='';}
+    el.classList.remove('hidden');
+  }catch(e){el.className='text-xs text-red-500';el.textContent=e.message;el.classList.remove('hidden')}
+});
+
+async function loadCompliance(){
+  try{const config=await(await authedFetch('/api/compliance')).json();
+    document.getElementById('compliance-list').innerHTML=Object.entries(config).map(([mode,cfg])=>`
+      <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
+        <div><p class="text-sm font-medium">${mode.toUpperCase()}</p><p class="text-xs text-slate-400">${cfg.description}</p></div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" class="sr-only peer compliance-toggle" data-mode="${mode}" ${cfg.enabled?'checked':''}>
+          <div class="w-9 h-5 bg-slate-300 peer-checked:bg-blue-600 rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+        </label>
+      </div>
+    `).join('');
+    document.querySelectorAll('.compliance-toggle').forEach(t=>t.addEventListener('change',async()=>{
+      await authedFetch(`/api/compliance/${t.dataset.mode}`,{method:'PUT',headers:{'Content-Type':'application/json',...authHeaders()},
+        body:JSON.stringify({enabled:t.checked})});
+    }));
+  }catch(e){}
+}
+
+async function loadSystemStatus(){
+  try{const s=await(await authedFetch('/api/system/status')).json();
+    const r=s.resources||{};
+    document.getElementById('system-status').innerHTML=`
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3"><p class="text-xs text-slate-500">Version</p><p class="text-sm font-medium">${s.version}</p></div>
+        <div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3"><p class="text-xs text-slate-500">Cameras</p><p class="text-sm font-medium">${s.cameras.connected}/${s.cameras.total}</p></div>
+        <div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3"><p class="text-xs text-slate-500">Search Events</p><p class="text-sm font-medium">${s.search_index.total_events}</p></div>
+        <div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3"><p class="text-xs text-slate-500">Encrypted Results</p><p class="text-sm font-medium">${s.storage.encrypted_results}</p></div>
+        <div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3"><p class="text-xs text-slate-500">Python</p><p class="text-sm font-medium">${s.python}</p></div>
+        <div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3"><p class="text-xs text-slate-500">OS</p><p class="text-sm font-medium">${s.os}</p></div>
+        ${r.cpu_percent!==undefined?`<div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3"><p class="text-xs text-slate-500">CPU</p><p class="text-sm font-medium">${r.cpu_percent}%</p></div>
+        <div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3"><p class="text-xs text-slate-500">Memory</p><p class="text-sm font-medium">${r.memory_used_gb}/${r.memory_total_gb} GB</p></div>`:''}
+      </div>
+      <p class="text-xs text-slate-400 mt-3">Domains: ${Object.keys(s.domains).join(', ')}</p>
+    `;
+  }catch(e){document.getElementById('system-status').innerHTML=`<p class="text-red-500 text-sm">${e.message}</p>`}
+}
+
+// ====== CSV EXPORT ======
+// Add CSV download to results section
+document.getElementById('download-json').insertAdjacentHTML('afterend',
+  ' <button id="download-csv" class="text-xs border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 ml-2">CSV</button>');
+document.getElementById('download-csv').addEventListener('click', ()=>{
+  if(!analysisResults)return;
+  const r=analysisResults.results||analysisResults;
+  const events=r.events||[];
+  if(!events.length){alert('No events to export');return}
+  const headers=['timestamp','event_type','category','description','behavior_target','intensity','prompt_level','duration_seconds'];
+  const csv=[headers.join(','),...events.map(e=>headers.map(h=>`"${(e[h]||'').toString().replace(/"/g,'""')}"`).join(','))].join('\n');
+  const b=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`aba_events_${new Date().toISOString().slice(0,10)}.csv`;a.click();
 });
 
 // ====== INIT ======
