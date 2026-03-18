@@ -29,16 +29,20 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 # ====== QWEN STATUS (cached at import time) ======
 
 def _check_qwen_status() -> dict:
-    """Check if Qwen provider is available. Runs once at startup."""
+    """Check if Qwen provider is available using subprocess to avoid blocking."""
+    import subprocess
     try:
-        import torch
-        if torch.cuda.is_available():
+        result = subprocess.run(
+            ["python", "-c", "import torch; print(torch.cuda.is_available())"],
+            capture_output=True, text=True, timeout=8,
+        )
+        if result.returncode == 0 and "True" in result.stdout:
             return {"available": True, "reason": None}
         return {"available": False, "reason": "No CUDA GPU"}
-    except ImportError:
-        return {"available": False, "reason": "PyTorch not installed"}
-    except Exception as e:
-        return {"available": False, "reason": str(e)}
+    except subprocess.TimeoutExpired:
+        return {"available": False, "reason": "Check timed out"}
+    except Exception:
+        return {"available": False, "reason": "PyTorch not available"}
 
 
 _QWEN_STATUS = _check_qwen_status()
