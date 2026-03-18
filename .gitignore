@@ -30,4 +30,7 @@ access_events/
 mobile/node_modules/
 mobile/.expo/
 mobile/dist/
+frontend/node_modules/
+frontend/.next/
+frontend/dist/
 **/models/*.t7
