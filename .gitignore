@@ -27,4 +27,7 @@ pos_data/
 alerts/
 access_events/
 .search.db
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
 **/models/*.t7

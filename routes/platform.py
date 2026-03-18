@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from security.audit import log_event
 from routes.helpers import (
+    CONFIGS_DIR,
     OUTPUT_DIR,
     UPLOAD_DIR,
     _client_ip,
@@ -237,3 +238,44 @@ async def check_compliance_endpoint(request: Request, authorization: str | None 
         action=body.get("action", ""),
         context=body.get("context"),
     )
+
+
+# ====== BRANDING / WHITE-LABEL ======
+
+BRANDING_FILE = CONFIGS_DIR / "branding.json"
+
+@router.get("/api/branding")
+async def get_branding():
+    """Get white-label branding config (public, no auth required)."""
+    import json
+    if BRANDING_FILE.exists():
+        with open(BRANDING_FILE) as f:
+            return json.load(f)
+    return {"appName": "The I", "tagline": "Intelligent Video Analytics", "logoText": "I"}
+
+
+@router.put("/api/branding")
+async def update_branding(request: Request, authorization: str | None = Header(None)):
+    """Update white-label branding config (admin only)."""
+    user = _require_auth(authorization, request)
+    if isinstance(user, JSONResponse):
+        return user
+    if user["role"] != "admin":
+        return JSONResponse({"error": "Admin only"}, status_code=403)
+
+    import json
+    body = await request.json()
+
+    # Load existing and merge
+    existing = {}
+    if BRANDING_FILE.exists():
+        with open(BRANDING_FILE) as f:
+            existing = json.load(f)
+
+    existing.update(body)
+    with open(BRANDING_FILE, "w") as f:
+        json.dump(existing, f, indent=2)
+
+    log_event("update_branding", user=user["sub"], role=user["role"], ip=_client_ip(request),
+              details={"fields": list(body.keys())})
+    return existing

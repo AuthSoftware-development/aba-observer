@@ -1,0 +1,17 @@
+{
+  "appName": "The I",
+  "tagline": "Intelligent Video Analytics",
+  "logoText": "I",
+  "primaryColor": "#2563eb",
+  "primaryDark": "#1d4ed8",
+  "accentColor": "#3b82f6",
+  "backgroundColor": "#0f172a",
+  "surfaceColor": "#1e293b",
+  "textColor": "#f1f5f9",
+  "textSecondary": "#94a3b8",
+  "hipaaEnabled": true,
+  "showPoweredBy": false,
+  "supportEmail": "",
+  "privacyUrl": "",
+  "termsUrl": ""
+}
